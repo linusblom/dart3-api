@@ -1,15 +1,20 @@
-import express from 'express';
+import Koa from 'koa';
+import cors from '@koa/cors';
+import dotenv from 'dotenv';
+import bodyParser from 'koa-bodyparser';
 
-const app = express();
-const port = 8080;
+import { router } from './routes';
+import { error, authorize } from './middlewares';
 
-app.get('/', (req, res) => {
-  res.send('The sedulous hyena ate the antelope!');
-});
+dotenv.config();
+const { PORT, ORIGIN } = process.env;
+const app = new Koa();
 
-app.listen(port, err => {
-  if (err) {
-    return console.error(err);
-  }
-  return console.log(`server is listening on ${port}`);
-});
+app.use(cors({ origin: ORIGIN, credentials: true }));
+app.use(error);
+app.use(authorize);
+app.use(bodyParser());
+app.use(router.routes());
+app.use(router.allowedMethods());
+
+app.listen(PORT, () => console.log(`Dart3 server is listening on ${PORT}`));
