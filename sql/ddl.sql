@@ -2,13 +2,15 @@ CREATE TABLE IF NOT EXISTS player (
   id                    SERIAL,
   account_id            CHAR(30)      NOT NULL,
   name                  VARCHAR(64)   NOT NULL,
+  email                 VARCHAR       NOT NULL,
   balance               NUMERIC(10,2) DEFAULT 0,
   created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  color                 CHAR(7),
+  color                 CHAR(7)       DEFAULT '#FFFFFF',
   avatar                VARCHAR,
   xp                    INTEGER       DEFAULT 0,
   high_score            SMALLINT      DEFAULT 0,
   one_hundred_eighties  SMALLINT      DEFAULT 0,
+  nine_darters          SMALLINT      DEFAULT 0,
   PRIMARY KEY (id)
 );
 
@@ -37,7 +39,6 @@ CREATE TABLE IF NOT EXISTS "transaction" (
 CREATE TYPE game_type AS ENUM (
   'havleit',
   'legs',
-  'legs_classic',
   '301_si_do',
   '501_si_do',
   '301_di_do',
@@ -73,6 +74,8 @@ CREATE TABLE IF NOT EXISTS game_player (
   FOREIGN KEY (player_id) REFERENCES player (id)
 );
 
+ALTER TABLE game ADD FOREIGN KEY (game_player_id) REFERENCES game_player (id);
+
 CREATE TABLE IF NOT EXISTS game_score (
   id              SERIAL,
   game_player_id  INTEGER,
@@ -101,7 +104,7 @@ CREATE TABLE IF NOT EXISTS jackpot (
   value       NUMERIC(5,2)  DEFAULT 0,
   next_value  NUMERIC(5,2)  DEFAULT 0,
   started_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  ended_at    TIMESTAMP,
+  won_at      TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (game_id) REFERENCES game (id),
   FOREIGN KEY (player_id) REFERENCES player (id)

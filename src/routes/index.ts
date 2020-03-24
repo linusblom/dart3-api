@@ -1,6 +1,7 @@
 import Router from 'koa-router';
-import { Context } from 'koa';
+
+import player from './player';
 
 export const router = new Router({ prefix: '/api/v1' });
 
-router.get('/test', async (ctx: Context) => (ctx.body = ctx.state.userId));
+router.use('/player', player.routes(), player.allowedMethods());
