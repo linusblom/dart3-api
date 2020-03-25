@@ -10,6 +10,7 @@
   "dependencies": {
     "@hapi/joi": "^17.1.1",
     "@koa/cors": "^3.0.0",
+    "aws-sdk": "^2.646.0",
     "dart3-sdk": "^0.1.1",
     "dotenv": "^8.2.0",
     "http-status-codes": "^1.4.0",

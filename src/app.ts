@@ -16,6 +16,7 @@ app
   .use(authorize)
   .use(bodyParser())
   .use(router.routes())
+
   .use(router.allowedMethods());
 
 app.listen(PORT, () => console.log(`Dart3 server is listening on ${PORT}`));
