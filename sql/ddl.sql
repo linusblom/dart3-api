@@ -1,10 +1,14 @@
+CREATE EXTENSION pgcrypto;
+
 CREATE TABLE IF NOT EXISTS player (
   id                    SERIAL,
   account_id            CHAR(30)      NOT NULL,
   name                  VARCHAR(64)   NOT NULL,
   email                 VARCHAR       NOT NULL,
   balance               NUMERIC(10,2) DEFAULT 0,
+  pin                   VARCHAR(60)   NOT NULL,
   created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  deleted_at            TIMESTAMP,
   color                 CHAR(7)       DEFAULT '#FFFFFF',
   avatar                VARCHAR,
   xp                    INTEGER       DEFAULT 0,

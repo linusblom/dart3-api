@@ -1,2 +1,3 @@
-export * from './error-response';
+export * from './response';
 export * from './random-color';
+export * from './generate-pin';

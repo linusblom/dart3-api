@@ -1,29 +1,71 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import { CreatePlayer } from 'dart3-sdk';
+import { CreatePlayer, UpdatePlayer } from 'dart3-sdk';
 import md5 from 'md5';
 
-import { PlayerRepository } from '../repositories/player';
-import { errorResponse } from '../utils';
-import { randomColor } from '../utils/random-color';
+import { PlayerRepository } from '../repositories';
+import { randomColor, generatePin, response } from '../utils';
+import { sendEmail, generateWelcomeEmail, generateResetPinEmail } from '../aws';
 
 export class PlayerController {
   constructor(private repo = new PlayerRepository()) {}
 
   async get(ctx: Context, accountId: string) {
-    return await this.repo.get(accountId);
+    const players = await this.repo.get(ctx, accountId);
+
+    return response(ctx, httpStatusCodes.OK, players);
   }
 
-  async getById(ctx: Context, accountId: string, playerId: string) {
-    const player = await this.repo.getById(playerId, accountId);
-    return player ? player : errorResponse(ctx, httpStatusCodes.NOT_FOUND);
+  async getById(ctx: Context, accountId: string, playerId: number) {
+    const player = await this.repo.getById(ctx, accountId, playerId);
+    return response(ctx, httpStatusCodes.OK, player);
   }
 
   async create(ctx: Context, accountId: string, body: CreatePlayer) {
     const color = randomColor();
     const avatar = `https://www.gravatar.com/avatar/${md5(body.email)}?d=identicon`;
+    const pin = generatePin();
 
-    const id = await this.repo.create(accountId, body.name, body.email, color, avatar);
-    return await this.getById(ctx, accountId, id);
+    const playerId = await this.repo.create(
+      ctx,
+      accountId,
+      body.name,
+      body.email,
+      color,
+      avatar,
+      pin,
+    );
+
+    await sendEmail(body.email, generateWelcomeEmail(body.name, pin));
+
+    const player = await this.repo.getById(ctx, accountId, playerId);
+
+    return response(ctx, httpStatusCodes.CREATED, player);
+  }
+
+  async update(ctx: Context, accountId: string, playerId: number, body: UpdatePlayer) {
+    await this.repo.update(ctx, accountId, playerId, body.name);
+
+    const player = await this.repo.getById(ctx, accountId, playerId);
+
+    return response(ctx, httpStatusCodes.OK, player);
+  }
+
+  async resetPin(ctx: Context, accountId: string, playerId: number) {
+    const pin = generatePin();
+
+    await this.repo.updatePin(ctx, accountId, playerId, pin);
+
+    const player = await this.repo.getById(ctx, accountId, playerId);
+
+    await sendEmail(player.email, generateResetPinEmail(player.name, pin));
+
+    return response(ctx, httpStatusCodes.OK);
+  }
+
+  async delete(ctx: Context, accountId: string, playerId: number) {
+    await this.repo.delete(ctx, accountId, playerId);
+
+    return response(ctx, httpStatusCodes.OK);
   }
 }
