@@ -2,7 +2,7 @@ import Router from 'koa-router';
 import { Context } from 'koa';
 
 import { PlayerController } from '../controllers';
-import { validate } from '../middlewares';
+import { validate, pin } from '../middlewares';
 import { createPlayerSchema, updatePlayerSchema } from '../schemas';
 
 const router = new Router();
@@ -31,6 +31,7 @@ router
   )
   .delete(
     '/:playerId',
+    pin,
     async (ctx: Context) => await ctrl.delete(ctx, ctx.state.accountId, ctx.params.playerId),
   );
 
