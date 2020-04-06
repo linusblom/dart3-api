@@ -6,7 +6,7 @@ export const errorResponse = (ctx: Context, status: number) =>
 
 export const response = (ctx: Context, status: number, body?: any) => {
   ctx.status = status;
-  ctx.body = body || { message: httpStatusCodes.getStatusText(status) };
+  ctx.body = body;
 
   return ctx;
 };

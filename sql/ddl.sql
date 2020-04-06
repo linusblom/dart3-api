@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS player (
 );
 
 CREATE TYPE transaction_type AS ENUM (
+  'system',
   'bet',
   'win',
   'jackpot',
@@ -27,13 +28,13 @@ CREATE TYPE transaction_type AS ENUM (
   'transfer'
 );
 
-CREATE TABLE IF NOT EXISTS "transaction" (
+CREATE TABLE IF NOT EXISTS transaction (
   id            SERIAL,
   player_id     INTEGER,
   type          transaction_type  NOT NULL,
-  debit         NUMERIC(5,2)      DEFAULT 0,
-  credit        NUMERIC(5,2)      DEFAULT 0,
-  balance       NUMERIC(10,2)     NOT NULL,
+  debit         NUMERIC(10,2)      DEFAULT 0,
+  credit        NUMERIC(10,2)      DEFAULT 0,
+  balance       NUMERIC(10,2)     NOT NULL CHECK (balance >= 0),
   created_at    TIMESTAMP         DEFAULT CURRENT_TIMESTAMP,
   description  VARCHAR(100),
   PRIMARY KEY (id),
@@ -113,3 +114,21 @@ CREATE TABLE IF NOT EXISTS jackpot (
   FOREIGN KEY (game_id) REFERENCES game (id),
   FOREIGN KEY (player_id) REFERENCES player (id)
 );
+
+CREATE OR REPLACE FUNCTION update_player_balance()
+  RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE player SET balance = NEW.balance WHERE id = NEW.player_id;
+  RETURN NEW;
+END; $$ language plpgsql;
+
+CREATE TRIGGER new_transaction AFTER INSERT ON transaction FOR EACH ROW EXECUTE PROCEDURE update_player_balance();
+
+CREATE OR REPLACE FUNCTION init_player_balace()
+  RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO transaction (player_id, type, balance) values(NEW.id, 'system', 0);
+  RETURN NEW;
+END; $$ language plpgsql;
+
+CREATE TRIGGER new_player AFTER INSERT ON player FOR EACH ROW EXECUTE PROCEDURE init_player_balace();

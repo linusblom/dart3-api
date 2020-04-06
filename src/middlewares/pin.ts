@@ -11,10 +11,10 @@ export const pin = async (ctx: Context, next: Function) => {
     return errorResponse(ctx, httpStatusCodes.UNAUTHORIZED);
   }
 
-  const player = await queryOne('SELECT id FROM player WHERE id = $1 AND pin = crypt($2, pin)', [
-    ctx.params.playerId,
-    pin,
-  ]);
+  const player = await queryOne(
+    'SELECT id FROM player WHERE id = $1 AND account_id = $2 AND pin = crypt($3, pin)',
+    [ctx.params.playerId || ctx.request.body.playerId, ctx.state.accountId, pin],
+  );
 
   return player ? next() : errorResponse(ctx, httpStatusCodes.UNAUTHORIZED);
 };

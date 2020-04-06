@@ -3,22 +3,30 @@ import httpStatusCodes from 'http-status-codes';
 import { CreatePlayer, UpdatePlayer } from 'dart3-sdk';
 import md5 from 'md5';
 
-import { PlayerRepository } from '../repositories';
+import { PlayerRepository, TransactionRepository } from '../repositories';
 import { randomColor, generatePin, response } from '../utils';
 import { sendEmail, generateWelcomeEmail, generateResetPinEmail } from '../aws';
 
 export class PlayerController {
-  constructor(private repo = new PlayerRepository()) {}
+  constructor(
+    private repo = new PlayerRepository(),
+    private transactionRepo = new TransactionRepository(),
+  ) {}
 
   async get(ctx: Context, accountId: string) {
     const players = await this.repo.get(ctx, accountId);
 
-    return response(ctx, httpStatusCodes.OK, players);
+    return response(
+      ctx,
+      httpStatusCodes.OK,
+      players.map(player => ({ ...player, transactions: [] })),
+    );
   }
 
   async getById(ctx: Context, accountId: string, playerId: number) {
     const player = await this.repo.getById(ctx, accountId, playerId);
-    return response(ctx, httpStatusCodes.OK, player);
+    const transactions = await this.transactionRepo.getLatest(ctx, playerId);
+    return response(ctx, httpStatusCodes.OK, { ...player, transactions });
   }
 
   async create(ctx: Context, accountId: string, body: CreatePlayer) {
