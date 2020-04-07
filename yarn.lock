@@ -472,10 +472,10 @@ currently-unhandled@^0.4.1:
   dependencies:
     array-find-index "^1.0.1"
 
-dart3-sdk@^0.1.25:
-  version "0.1.25"
-  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.1.25.tgz#eb3a08c406528d7e50aea04bbceb292abfdfb7a7"
-  integrity sha512-ruxuY78wILxYNZPwydqVI65Qwh5SxJwcmEgnKAPD0Xmn4t1tidwR4JG64xO6Xj+GnzpE7hAR4x/zVl+Mhk0l/g==
+dart3-sdk@^0.1.29:
+  version "0.1.29"
+  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.1.29.tgz#7882637bcbb506f0cd7df8b57dd741e55343de33"
+  integrity sha512-Ed4QlTBPvBt91BYLPLmEdrGm0uklw7r8SVKZWbCxRJecLX33rDZaW2iMgaSerVpXg0R/QfFJFbz5XBgOGT4mVw==
 
 dateformat@~1.0.4-1.2.3:
   version "1.0.12"

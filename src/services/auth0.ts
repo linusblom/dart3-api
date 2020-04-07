@@ -30,10 +30,10 @@ export class Auth0Service {
     return this.token;
   }
 
-  async getAccount(ctx: Context, accountId: string) {
+  async getUser(ctx: Context, userId: string) {
     const authorization = await this.getToken(ctx);
 
-    const user = await fetch(ctx, `${AUTH0_API_URL}/users/${accountId}`, {
+    const user = await fetch(ctx, `${AUTH0_API_URL}/users/${userId}`, {
       method: 'get',
       headers: { Authorization: authorization },
     });

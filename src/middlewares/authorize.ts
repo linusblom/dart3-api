@@ -8,19 +8,19 @@ export const authorize = async (ctx: Context, next: Function) => {
   const authorization = ctx.get('authorization');
 
   const [, token] = /^Bearer\s(.+)$/i.exec(authorization) || [];
-  let accountId: string;
+  let userId: string;
 
   if (token) {
     const decoded: any = jwt.decode(token, { complete: true });
 
-    accountId = decoded && decoded.payload && decoded.payload.sub;
+    userId = decoded && decoded.payload && decoded.payload.sub;
   }
 
-  if (!accountId) {
+  if (!userId) {
     return errorResponse(ctx, httpStatusCodes.UNAUTHORIZED);
   }
 
-  ctx.state = { ...ctx.state, accountId };
+  ctx.state = { ...ctx.state, userId };
 
   return next();
 };

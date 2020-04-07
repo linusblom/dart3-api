@@ -44,7 +44,7 @@ export class TransactionController {
 
   async playerToPlayer(
     ctx: Context,
-    accountId: string,
+    userId: string,
     fromPlayerId: number,
     toPlayerId: number,
     body: TransactionPayload,
@@ -53,8 +53,8 @@ export class TransactionController {
       return errorResponse(ctx, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
     }
 
-    const fromPlayer = await this.playerRepo.getById(ctx, accountId, fromPlayerId);
-    const toPlayer = await this.playerRepo.getById(ctx, accountId, toPlayerId);
+    const fromPlayer = await this.playerRepo.getById(ctx, userId, fromPlayerId);
+    const toPlayer = await this.playerRepo.getById(ctx, userId, toPlayerId);
 
     const transactionId = await this.repo.debit(
       ctx,

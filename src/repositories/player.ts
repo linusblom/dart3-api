@@ -6,27 +6,27 @@ import { queryAll, queryOne } from '../database';
 import { errorResponse } from '../utils';
 
 export class PlayerRepository {
-  async get(ctx: Context, accountId: string): Promise<Player[]> {
+  async get(ctx: Context, userId: string): Promise<Player[]> {
     const players = await queryAll<Player>(
       `
       SELECT id, name, email, balance, created_at, deleted_at, color, avatar, xp, high_score, one_hundred_eighties, nine_darters
       FROM player
-      WHERE account_id = $1 AND deleted_at IS NULL;
+      WHERE user_id = $1 AND deleted_at IS NULL;
       `,
-      [accountId],
+      [userId],
     );
 
     return players;
   }
 
-  async getById(ctx: Context, accountId: string, playerId: number): Promise<Player> {
+  async getById(ctx: Context, userId: string, playerId: number): Promise<Player> {
     const player = await queryOne<Player>(
       `
       SELECT id, name, email, balance, created_at, deleted_at, color, avatar, xp, high_score, one_hundred_eighties, nine_darters
       FROM player
-      WHERE id = $1 AND account_id = $2 AND deleted_at IS NULL;
+      WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL;
       `,
-      [playerId, accountId],
+      [playerId, userId],
     );
 
     return player ? player : errorResponse(ctx, httpStatusCodes.NOT_FOUND);
@@ -34,7 +34,7 @@ export class PlayerRepository {
 
   async create(
     ctx: Context,
-    accountId: string,
+    userId: string,
     name: string,
     email: string,
     color: string,
@@ -43,53 +43,53 @@ export class PlayerRepository {
   ): Promise<number> {
     const response = await queryOne<DbId>(
       `
-      INSERT INTO player (account_id, name, email, color, avatar, pin)
+      INSERT INTO player (user_id, name, email, color, avatar, pin)
       values($1, $2, $3, $4, $5, crypt($6, gen_salt('bf')))
       RETURNING id;
       `,
-      [accountId, name, email, color, avatar, pin],
+      [userId, name, email, color, avatar, pin],
     );
 
     return response ? response.id : errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
   }
 
-  async update(ctx: Context, accountId: string, playerId: number, name: string): Promise<number> {
+  async update(ctx: Context, userId: string, playerId: number, name: string): Promise<number> {
     const response = await queryOne<DbId>(
       `
       UPDATE player
       SET name = $1
-      WHERE account_id = $2 AND id = $3 AND deleted_at IS NULL
+      WHERE user_id = $2 AND id = $3 AND deleted_at IS NULL
       RETURNING id;
       `,
-      [name, accountId, playerId],
+      [name, userId, playerId],
     );
 
     return response ? response.id : errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
   }
 
-  async updatePin(ctx: Context, accountId: string, playerId: number, pin: string): Promise<number> {
+  async updatePin(ctx: Context, userId: string, playerId: number, pin: string): Promise<number> {
     const response = await queryOne<DbId>(
       `
       UPDATE player
       SET pin = crypt($1, gen_salt('bf'))
-      WHERE account_id = $2 AND id = $3 AND deleted_at IS NULL
+      WHERE user_id = $2 AND id = $3 AND deleted_at IS NULL
       RETURNING id;
       `,
-      [pin, accountId, playerId],
+      [pin, userId, playerId],
     );
 
     return response ? response.id : errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
   }
 
-  async delete(ctx: Context, accountId: string, playerId: number): Promise<number> {
+  async delete(ctx: Context, userId: string, playerId: number): Promise<number> {
     const response = await queryOne<DbId>(
       `
       UPDATE player
       SET deleted_at = CURRENT_TIMESTAMP
-      WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL
+      WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL
       RETURNING id;
       `,
-      [accountId, playerId],
+      [userId, playerId],
     );
 
     return response ? response.id : errorResponse(ctx, httpStatusCodes.BAD_REQUEST);

@@ -2,7 +2,7 @@ CREATE EXTENSION pgcrypto;
 
 CREATE TABLE IF NOT EXISTS player (
   id                    SERIAL,
-  account_id            CHAR(30)      NOT NULL,
+  user_id               CHAR(30)      NOT NULL,
   name                  VARCHAR(64)   NOT NULL,
   email                 VARCHAR       NOT NULL,
   balance               NUMERIC(10,2) DEFAULT 0,
@@ -52,7 +52,7 @@ CREATE TYPE game_type AS ENUM (
 
 CREATE TABLE IF NOT EXISTS game (
   id              SERIAL,
-  account_id      CHAR(30)  NOT NULL,
+  user_id         CHAR(30)  NOT NULL,
   type            game_type NOT NULL,
   legs            SMALLINT  DEFAULT 1,
   sets            SMALLINT  DEFAULT 1,
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS jackpot (
   id          SERIAL,
   game_id     INTEGER,
   player_id   INTEGER,
-  account_id  CHAR(30)      NOT NULL,
+  user_id     CHAR(30)      NOT NULL,
   value       NUMERIC(5,2)  DEFAULT 0,
   next_value  NUMERIC(5,2)  DEFAULT 0,
   started_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,

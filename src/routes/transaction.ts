@@ -22,7 +22,7 @@ router
     async (ctx: Context) =>
       await ctrl.playerToPlayer(
         ctx,
-        ctx.state.accountId,
+        ctx.state.userId,
         ctx.params.playerId,
         ctx.params.toPlayerId,
         ctx.request.body,

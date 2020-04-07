@@ -12,8 +12,8 @@ export const pin = async (ctx: Context, next: Function) => {
   }
 
   const player = await queryOne(
-    'SELECT id FROM player WHERE id = $1 AND account_id = $2 AND pin = crypt($3, pin)',
-    [ctx.params.playerId || ctx.request.body.playerId, ctx.state.accountId, pin],
+    'SELECT id FROM player WHERE id = $1 AND user_id = $2 AND pin = crypt($3, pin)',
+    [ctx.params.playerId || ctx.request.body.playerId, ctx.state.userId, pin],
   );
 
   return player ? next() : errorResponse(ctx, httpStatusCodes.UNAUTHORIZED);
