@@ -31,7 +31,7 @@ export class PlayerController {
 
   async create(ctx: Context, userId: string, body: CreatePlayer) {
     const color = randomColor();
-    const avatar = `https://www.gravatar.com/avatar/${md5(body.email)}?d=identicon`;
+    const avatar = `https://s.gravatar.com/avatar/${md5(body.email)}?d=identicon`;
     const pin = generatePin();
 
     const playerId = await this.repo.create(ctx, userId, body.name, body.email, color, avatar, pin);

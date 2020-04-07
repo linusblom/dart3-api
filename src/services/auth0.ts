@@ -1,7 +1,6 @@
 import { Context } from 'koa';
-import httpStatusCodes from 'http-status-codes';
 
-import { fetch, camelize, response } from '../utils';
+import { fetch } from '../utils';
 
 const {
   AUTH0_CLIENT_ID,
@@ -35,9 +34,21 @@ export class Auth0Service {
 
     const user = await fetch(ctx, `${AUTH0_API_URL}/users/${userId}`, {
       method: 'get',
-      headers: { Authorization: authorization },
+      headers: { authorization },
     });
 
-    return response(ctx, httpStatusCodes.OK, camelize(user));
+    return user;
+  }
+
+  async updateUser(ctx: Context, userId: string, body) {
+    const authorization = await this.getToken(ctx);
+
+    const user = await fetch(ctx, `${AUTH0_API_URL}/users/${userId}`, {
+      method: 'patch',
+      headers: { authorization, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return user;
   }
 }
