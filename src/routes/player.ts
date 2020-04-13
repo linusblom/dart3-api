@@ -25,7 +25,7 @@ router
     async (ctx: Context) =>
       await ctrl.update(ctx, ctx.state.userId, ctx.params.playerId, ctx.request.body),
   )
-  .patch(
+  .post(
     '/:playerId/reset-pin',
     async (ctx: Context) => await ctrl.resetPin(ctx, ctx.state.userId, ctx.params.playerId),
   )

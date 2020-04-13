@@ -6,7 +6,27 @@ import { queryOne, queryAll } from '../database';
 import { errorResponse } from '../utils';
 
 export class TransactionRepository {
-  async getById(ctx: Context, transactionId: number, playerId: number): Promise<Transaction> {
+  async getUserBank(ctx: Context, userId: string) {
+    const bank = await queryOne(
+      `
+      SELECT COALESCE(SUM(p.balance), 0.00) AS players, COALESCE(SUM(t.turn_over), 0.00) AS turn_over
+      FROM player AS p
+      INNER JOIN 
+      (
+        SELECT player_id, SUM(debit) AS turn_over
+        FROM transaction
+        WHERE type = 'bet'
+        GROUP BY player_id
+      ) AS t
+      ON p.id = t.player_id WHERE p.user_id = $1;
+      `,
+      [userId],
+    );
+
+    return bank;
+  }
+
+  async getById(ctx: Context, transactionId: number, playerId: number) {
     const transaction = await queryOne<Transaction>(
       `
       SELECT id, type, debit, credit, balance, created_at, description

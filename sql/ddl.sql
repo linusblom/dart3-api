@@ -12,9 +12,6 @@ CREATE TABLE IF NOT EXISTS player (
   color                 CHAR(7)       DEFAULT '#FFFFFF',
   avatar                VARCHAR,
   xp                    INTEGER       DEFAULT 0,
-  high_score            SMALLINT      DEFAULT 0,
-  one_hundred_eighties  SMALLINT      DEFAULT 0,
-  nine_darters          SMALLINT      DEFAULT 0,
   PRIMARY KEY (id)
 );
 
@@ -32,8 +29,8 @@ CREATE TABLE IF NOT EXISTS transaction (
   id            SERIAL,
   player_id     INTEGER,
   type          transaction_type  NOT NULL,
-  debit         NUMERIC(10,2)      DEFAULT 0,
-  credit        NUMERIC(10,2)      DEFAULT 0,
+  debit         NUMERIC(10,2)     DEFAULT 0,
+  credit        NUMERIC(10,2)     DEFAULT 0,
   balance       NUMERIC(10,2)     NOT NULL CHECK (balance >= 0),
   created_at    TIMESTAMP         DEFAULT CURRENT_TIMESTAMP,
   description  VARCHAR(100),
@@ -56,9 +53,10 @@ CREATE TABLE IF NOT EXISTS game (
   type            game_type NOT NULL,
   legs            SMALLINT  DEFAULT 1,
   sets            SMALLINT  DEFAULT 1,
-  game_player_id  INTEGER   NOT NULL,
   bet             SMALLINT  NOT NULL,
-  started_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  game_player_id  INTEGER,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  started_at      TIMESTAMP,
   ended_at        TIMESTAMP,
   PRIMARY KEY (id)
 );
@@ -67,7 +65,7 @@ CREATE TABLE IF NOT EXISTS game_player (
   id        SERIAL,
   game_id   INTEGER,
   player_id INTEGER,
-  turn      SMALLINT  NOT NULL,
+  turn      SMALLINT  DEFAULT 1,
   leg       SMALLINT  DEFAULT 1,
   set       SMALLINT  DEFAULT 1,
   score     SMALLINT  DEFAULT 0,
@@ -106,8 +104,8 @@ CREATE TABLE IF NOT EXISTS jackpot (
   game_id     INTEGER,
   player_id   INTEGER,
   user_id     CHAR(30)      NOT NULL,
-  value       NUMERIC(5,2)  DEFAULT 0,
-  next_value  NUMERIC(5,2)  DEFAULT 0,
+  value       NUMERIC(10,2) DEFAULT 0,
+  next_value  NUMERIC(10,2) DEFAULT 0,
   started_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   won_at      TIMESTAMP,
   PRIMARY KEY (id),

@@ -18,7 +18,7 @@ export const queryRaw = async (query: string, params: AlphaNum[]) => {
   }
 };
 
-export const queryAll = async <T>(query: string, params: AlphaNum[]): Promise<T[]> => {
+export const queryAll = async <T = any>(query: string, params: AlphaNum[]): Promise<T[]> => {
   const [response, err] = await queryRaw(query, stringify(params));
 
   if (err !== null) {
@@ -28,7 +28,7 @@ export const queryAll = async <T>(query: string, params: AlphaNum[]): Promise<T[
   return camelize(response.rows);
 };
 
-export const queryOne = async <T>(query: string, params: AlphaNum[]): Promise<T> => {
+export const queryOne = async <T = any>(query: string, params: AlphaNum[]): Promise<T> => {
   const [response, err] = await queryRaw(query, stringify(params));
 
   if (err !== null) {
