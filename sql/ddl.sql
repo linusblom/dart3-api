@@ -22,7 +22,8 @@ CREATE TYPE transaction_type AS ENUM (
   'jackpot',
   'deposit',
   'withdrawal',
-  'transfer'
+  'transfer',
+  'refund'
 );
 
 CREATE TABLE IF NOT EXISTS transaction (
@@ -74,7 +75,8 @@ CREATE TABLE IF NOT EXISTS game_player (
   win       SMALLINT  DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (game_id) REFERENCES game (id),
-  FOREIGN KEY (player_id) REFERENCES player (id)
+  FOREIGN KEY (player_id) REFERENCES player (id),
+  UNIQUE(game_id, player_id)
 );
 
 ALTER TABLE game ADD FOREIGN KEY (game_player_id) REFERENCES game_player (id);

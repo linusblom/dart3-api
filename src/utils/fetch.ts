@@ -9,13 +9,13 @@ export const fetch = async (ctx: Context, url: string, init: RequestInit = { met
     const json = await response.json();
 
     if (json.statusCode >= 399) {
-      console.error(json);
+      ctx.logger.info(json);
       return errorResponse(ctx, json.statusCode);
     }
 
     return json;
   } catch (err) {
-    console.error(err);
+    ctx.logger.info(err);
     return errorResponse(ctx, err.status);
   }
 };

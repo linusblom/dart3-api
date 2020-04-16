@@ -1,13 +1,14 @@
 import { Context } from 'koa';
-import { DbId, GameType, Game, GamePlayer } from 'dart3-sdk';
+import { GameType, Game } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { queryOne, queryAll } from '../database';
+import { queryOne, queryId } from '../database';
 import { errorResponse } from '../utils';
+import { SQLError } from '../enums';
 
 export class GameRepository {
-  async getById(ctx: Context, userId: string, gameId: number) {
-    const game = await queryOne<Game>(
+  async getById(ctx: Context, userId: string, gameId: number): Promise<Game> {
+    const [response, err] = await queryOne(
       `
       SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at
       FROM game
@@ -16,11 +17,19 @@ export class GameRepository {
       [gameId, userId],
     );
 
-    return game ? game : errorResponse(ctx, httpStatusCodes.NOT_FOUND);
+    if (err) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    }
+
+    if (!response) {
+      return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
+    }
+
+    return response;
   }
 
-  async getCurrentGame(ctx: Context, userId: string) {
-    const game = await queryOne<Game>(
+  async getCurrentGame(ctx: Context, userId: string): Promise<Game> {
+    const [response, err] = await queryOne(
       `
       SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at
       FROM game
@@ -29,7 +38,11 @@ export class GameRepository {
       [userId],
     );
 
-    return game;
+    if (err) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    }
+
+    return response;
   }
 
   async create(
@@ -39,8 +52,8 @@ export class GameRepository {
     legs: number,
     sets: number,
     bet: number,
-  ) {
-    const response = await queryOne<DbId>(
+  ): Promise<number> {
+    const [response, err] = await queryId(
       `
       INSERT INTO game (user_id, type, legs, sets, bet)
       values($1, $2, $3, $4, $5)
@@ -49,33 +62,11 @@ export class GameRepository {
       [userId, type, legs, sets, bet],
     );
 
-    return response ? response.id : errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-  }
+    if (err) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    }
 
-  async getGamePlayers(ctx: Context, gameId: number) {
-    const gamePlayers = await queryAll<GamePlayer>(
-      `
-      SELECT id, player_id, turn, leg, set, score, position, xp, win
-      FROM game_player
-      WHERE game_id = $1;
-      `,
-      [gameId],
-    );
-
-    return gamePlayers;
-  }
-
-  async createGamePlayer(ctx: Context, gameId: number, playerId: number) {
-    const response = await queryOne<DbId>(
-      `
-      INSERT INTO game_player (game_id, player_id)
-      values($1, $2)
-      RETURNING id;
-      `,
-      [gameId, playerId],
-    );
-
-    return response ? response.id : errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    return response;
   }
 
   async update(
@@ -86,8 +77,8 @@ export class GameRepository {
     legs: number,
     sets: number,
     bet: number,
-  ) {
-    const response = await queryOne<DbId>(
+  ): Promise<number> {
+    const [response, err] = await queryId(
       `
       UPDATE game
       SET type = $1, legs = $2, sets = $3, bet = $4
@@ -97,18 +88,31 @@ export class GameRepository {
       [type, legs, sets, bet, userId, gameId],
     );
 
-    return response ? response.id : errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    if (err) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    }
+
+    return response;
   }
 
-  async delete(ctx: Context, userId: string, gameId: number) {
-    await queryOne<DbId>(
+  async delete(ctx: Context, userId: string, gameId: number): Promise<number> {
+    const [response, err] = await queryId(
       `
       DELETE FROM game
-      WHERE user_id = $1 AND id = $2 AND started_at IS NULL;
+      WHERE user_id = $1 AND id = $2 AND started_at IS NULL
+      RETURNING id;
       `,
       [userId, gameId],
     );
 
-    return;
+    if (err && err.code === SQLError.ForeignKeyViolation) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
+
+    if (err) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    }
+
+    return response;
   }
 }

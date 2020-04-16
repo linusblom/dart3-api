@@ -2,7 +2,7 @@ import { Context } from 'koa';
 import Router from 'koa-router';
 
 import { pin, validate } from '../middlewares';
-import { bankToPlayerSchema, playerToPlayerSchema } from '../schemas';
+import { simpleTransactionSchema, transferTransactionSchema } from '../schemas';
 import { TransactionController } from '../controllers';
 
 const router = new Router();
@@ -12,15 +12,15 @@ router
   .post(
     '/:playerId',
     pin,
-    validate(bankToPlayerSchema),
-    async (ctx: Context) => await ctrl.bankToPlayer(ctx, ctx.params.playerId, ctx.request.body),
+    validate(simpleTransactionSchema),
+    async (ctx: Context) => await ctrl.simple(ctx, ctx.params.playerId, ctx.request.body),
   )
   .post(
     '/:playerId/player/:toPlayerId',
     pin,
-    validate(playerToPlayerSchema),
+    validate(transferTransactionSchema),
     async (ctx: Context) =>
-      await ctrl.playerToPlayer(
+      await ctrl.transfer(
         ctx,
         ctx.state.userId,
         ctx.params.playerId,

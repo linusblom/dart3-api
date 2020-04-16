@@ -13,29 +13,63 @@ export const queryRaw = async (query: string, params: AlphaNum[]) => {
     const response = await pool.query(query, stringify(params));
     return [response, null];
   } catch (err) {
-    console.error({ code: err.code, message: err.detail });
     return [null, err];
   }
 };
 
-export const queryAll = async <T = any>(query: string, params: AlphaNum[]): Promise<T[]> => {
-  const [response, err] = await queryRaw(query, stringify(params));
+export const queryAll = async (query: string, params: AlphaNum[]) => {
+  const [raw, err] = await queryRaw(query, stringify(params));
 
-  if (err !== null) {
-    return null;
+  if (err) {
+    return [null, err];
   }
 
-  return camelize(response.rows);
+  return [camelize(raw.rows), null];
 };
 
-export const queryOne = async <T = any>(query: string, params: AlphaNum[]): Promise<T> => {
-  const [response, err] = await queryRaw(query, stringify(params));
+export const queryOne = async (query: string, params: AlphaNum[]) => {
+  const [rows, err] = await queryAll(query, stringify(params));
 
-  if (err !== null) {
-    return null;
+  if (err) {
+    return [null, err];
   }
 
-  const [first] = response.rows;
+  const [first] = rows;
 
-  return camelize(first);
+  return [first, null];
+};
+
+export const queryId = async (query: string, params: AlphaNum[]) => {
+  const [first, err] = await queryOne(query, stringify(params));
+
+  if (err) {
+    return [null, err];
+  }
+
+  return [first && first.id, null];
+};
+
+export const transaction = async (transactions: { query: string; params: AlphaNum[] }[]) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const queries = await Promise.all(
+      transactions.map(async ({ query, params }) => await client.query(query, stringify(params))),
+    );
+    await client.query('COMMIT');
+
+    const response = queries.map(value => {
+      const [first] = value.rows;
+      return camelize(first);
+    });
+
+    return [response, null];
+  } catch (err) {
+    await client.query('ROLLBACK');
+
+    return [null, err];
+  } finally {
+    client.release();
+  }
 };

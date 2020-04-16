@@ -1,7 +1,7 @@
 import Joi from '@hapi/joi';
 import { TransactionType } from 'dart3-sdk';
 
-export const bankToPlayerSchema = Joi.object({
+export const simpleTransactionSchema = Joi.object({
   type: Joi.string()
     .valid(TransactionType.Deposit, TransactionType.Withdrawal)
     .required(),
@@ -13,7 +13,7 @@ export const bankToPlayerSchema = Joi.object({
   description: Joi.string(),
 });
 
-export const playerToPlayerSchema = Joi.object({
+export const transferTransactionSchema = Joi.object({
   type: Joi.string()
     .valid(TransactionType.Transfer)
     .required(),

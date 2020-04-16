@@ -11,7 +11,7 @@ export class TransactionController {
     private playerRepo = new PlayerRepository(),
   ) {}
 
-  async bankToPlayer(ctx: Context, playerId: number, body: TransactionPayload) {
+  async simple(ctx: Context, playerId: number, body: TransactionPayload) {
     let transactionId: number;
 
     switch (body.type) {
@@ -42,7 +42,7 @@ export class TransactionController {
     return response(ctx, httpStatusCodes.OK, transaction);
   }
 
-  async playerToPlayer(
+  async transfer(
     ctx: Context,
     userId: string,
     fromPlayerId: number,
@@ -55,23 +55,7 @@ export class TransactionController {
 
     const fromPlayer = await this.playerRepo.getById(ctx, userId, fromPlayerId);
     const toPlayer = await this.playerRepo.getById(ctx, userId, toPlayerId);
-
-    const transactionId = await this.repo.debit(
-      ctx,
-      fromPlayerId,
-      TransactionType.Transfer,
-      body.amount,
-      `Transfer to ${toPlayer.name}`,
-    );
-
-    await this.repo.credit(
-      ctx,
-      toPlayerId,
-      TransactionType.Transfer,
-      body.amount,
-      `Transfer from ${fromPlayer.name}`,
-    );
-
+    const transactionId = await this.repo.transfer(ctx, fromPlayer, toPlayer, body.amount);
     const transaction = await this.repo.getById(ctx, transactionId, fromPlayerId);
 
     return response(ctx, httpStatusCodes.OK, transaction);

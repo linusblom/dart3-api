@@ -9,21 +9,24 @@ const router = new Router();
 const ctrl = new GameController();
 
 router
-  .get('/', async (ctx: Context) => await ctrl.getCurrentGame(ctx, ctx.state.userId))
   .post(
     '/',
     validate(createGameSchema),
     async (ctx: Context) => await ctrl.create(ctx, ctx.state.userId, ctx.request.body),
   )
-  .delete(
-    '/:gameId',
-    async (ctx: Context) => await ctrl.delete(ctx, ctx.state.userId, ctx.params.gameId),
-  )
+  .get('/current', async (ctx: Context) => await ctrl.getCurrentGame(ctx, ctx.state.userId))
+
+  .delete('/current', async (ctx: Context) => await ctrl.deleteCurrentGame(ctx, ctx.state.userId))
   .post(
-    '/:gameId/player',
+    '/current/player',
     pin,
     async (ctx: Context) =>
-      await ctrl.createGamePlayer(ctx, ctx.state.userId, ctx.params.gameId, ctx.request.body),
+      await ctrl.createCurrentGamePlayer(ctx, ctx.state.userId, ctx.request.body),
+  )
+  .delete(
+    '/current/player/:playerId',
+    async (ctx: Context) =>
+      await ctrl.deleteCurrentGamePlayer(ctx, ctx.state.userId, ctx.params.playerId),
   );
 
 export default router;
