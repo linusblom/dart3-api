@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS transaction (
 );
 
 CREATE TYPE game_type AS ENUM (
-  'havleit',
+  'halve_it',
   'legs',
   '301_si_do',
   '501_si_do',
@@ -66,9 +66,9 @@ CREATE TABLE IF NOT EXISTS game_player (
   id        SERIAL,
   game_id   INTEGER,
   player_id INTEGER,
-  turn      SMALLINT  DEFAULT 1,
-  leg       SMALLINT  DEFAULT 1,
-  set       SMALLINT  DEFAULT 1,
+  turn      SMALLINT,
+  legs      SMALLINT  DEFAULT 0,
+  sets      SMALLINT  DEFAULT 0,
   score     SMALLINT  DEFAULT 0,
   position  SMALLINT  DEFAULT 0,
   xp        SMALLINT  DEFAULT 0,

@@ -2,7 +2,7 @@ import { Context } from 'koa';
 import { GameType, Game } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { queryOne, queryId } from '../database';
+import { queryOne, queryId, queryAll } from '../database';
 import { errorResponse } from '../utils';
 import { SQLError } from '../enums';
 
@@ -69,24 +69,19 @@ export class GameRepository {
     return response;
   }
 
-  async update(
-    ctx: Context,
-    userId: string,
-    gameId: number,
-    type: GameType,
-    legs: number,
-    sets: number,
-    bet: number,
-  ): Promise<number> {
+  async delete(ctx: Context, gameId: number): Promise<number> {
     const [response, err] = await queryId(
       `
-      UPDATE game
-      SET type = $1, legs = $2, sets = $3, bet = $4
-      WHERE user_id = $5 AND id = $6 AND started_at IS NULL
+      DELETE FROM game
+      WHERE id = $1 AND started_at IS NULL
       RETURNING id;
       `,
-      [type, legs, sets, bet, userId, gameId],
+      [gameId],
     );
+
+    if (err && err.code === SQLError.ForeignKeyViolation) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
 
     if (err) {
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
@@ -95,19 +90,34 @@ export class GameRepository {
     return response;
   }
 
-  async delete(ctx: Context, userId: string, gameId: number): Promise<number> {
-    const [response, err] = await queryId(
+  async start(ctx: Context, gameId: number): Promise<number> {
+    const [players, _] = await queryAll(
       `
-      DELETE FROM game
-      WHERE user_id = $1 AND id = $2 AND started_at IS NULL
-      RETURNING id;
+      SELECT id
+      FROM game_player
+      WHERE game_id = $1;
       `,
-      [userId, gameId],
+      [gameId],
     );
 
-    if (err && err.code === SQLError.ForeignKeyViolation) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
+    const playerIds = players.map(({ id }) => id).sort(() => Math.random() - 0.5);
+
+    await Promise.all(
+      playerIds.map(
+        async (id: number, index: number) =>
+          await queryOne('UPDATE game_player SET turn = $1 WHERE id = $2;', [index + 1, id]),
+      ),
+    );
+
+    const [response, err] = await queryId(
+      `
+      UPDATE game
+      SET started_at = CURRENT_TIMESTAMP, game_player_id = $1
+      WHERE id = $2
+      RETURNING id;
+      `,
+      [playerIds[0], gameId],
+    );
 
     if (err) {
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
