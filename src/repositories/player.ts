@@ -67,7 +67,7 @@ export class PlayerRepository {
     const [response, err] = await queryId(
       `
       INSERT INTO player (user_id, name, email, color, avatar, pin)
-      values($1, $2, $3, $4, $5, crypt($6, gen_salt('bf')))
+      VALUES ($1, $2, $3, $4, $5, crypt($6, gen_salt('bf')))
       RETURNING id;
       `,
       [userId, name, email, color, avatar, pin],

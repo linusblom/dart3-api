@@ -2,15 +2,15 @@ import { Context } from 'koa';
 import { GamePlayer } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { queryAll, transaction } from '../database';
+import { queryAll, transaction, queryOne } from '../database';
 import { errorResponse } from '../utils';
 import { SQLError } from '../enums';
 
 export class GamePlayerRepository {
-  async get(ctx: Context, gameId: number): Promise<GamePlayer> {
+  async getByGameId(ctx: Context, gameId: number): Promise<GamePlayer[]> {
     const [response, err] = await queryAll(
       `
-      SELECT id, player_id, turn, leg, set, score, position, xp, win
+      SELECT id, player_id, turn, legs, sets, total, position, xp, win, gems
       FROM game_player
       WHERE game_id = $1
       ORDER BY turn;
@@ -25,17 +25,34 @@ export class GamePlayerRepository {
     return response;
   }
 
+  async getById(ctx: Context, gamePlayerId: number): Promise<GamePlayer> {
+    const [response, err] = await queryOne(
+      `
+      SELECT id, player_id, turn, legs, sets, total, position, xp, win, gems
+      FROM game_player
+      WHERE id = $1;
+      `,
+      [gamePlayerId],
+    );
+
+    if (err) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    }
+
+    return response;
+  }
+
   async create(
     ctx: Context,
     gameId: number,
-    score: number,
+    total: number,
     bet: number,
     playerId: number,
   ): Promise<number> {
     const [response, err] = await transaction([
       {
-        query: `INSERT INTO game_player (game_id, player_id, score) values($1, $2, $3) RETURNING id;`,
-        params: [gameId, playerId, score],
+        query: `INSERT INTO game_player (game_id, player_id, total) VALUES ($1, $2, $3) RETURNING id;`,
+        params: [gameId, playerId, total],
       },
       {
         query: `

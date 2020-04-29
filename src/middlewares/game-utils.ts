@@ -3,11 +3,12 @@ import { Context } from 'koa';
 
 import { errorResponse } from '../utils';
 import { queryOne } from '../database';
+import { getGameUtils } from '../game-utils';
 
-export const currentGame = async (ctx: Context, next: Function) => {
-  const [currentGame, err] = await queryOne(
+export const gameUtils = async (ctx: Context, next: Function) => {
+  const [game, err] = await queryOne(
     `
-    SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at
+    SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at, current_leg, current_set
     FROM game
     WHERE user_id = $1 AND ended_at IS NULL;
     `,
@@ -18,11 +19,13 @@ export const currentGame = async (ctx: Context, next: Function) => {
     return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 
-  if (!currentGame) {
+  if (!game) {
     return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
   }
 
-  ctx.state = { ...ctx.state, currentGame };
+  const gameUtils = getGameUtils(game);
+
+  ctx.state = { ...ctx.state, gameUtils };
 
   return next();
 };

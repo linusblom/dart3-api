@@ -10,7 +10,7 @@ export class GameRepository {
   async getById(ctx: Context, userId: string, gameId: number): Promise<Game> {
     const [response, err] = await queryOne(
       `
-      SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at
+      SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at, current_leg, current_set
       FROM game
       WHERE id = $1 AND user_id = $2;
       `,
@@ -31,7 +31,7 @@ export class GameRepository {
   async getCurrentGame(ctx: Context, userId: string): Promise<Game> {
     const [response, err] = await queryOne(
       `
-      SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at
+      SELECT id, type, legs, sets, game_player_id, bet, created_at, started_at, ended_at, current_leg, current_set
       FROM game
       WHERE user_id = $1 AND ended_at IS NULL;
       `,
@@ -56,7 +56,7 @@ export class GameRepository {
     const [response, err] = await queryId(
       `
       INSERT INTO game (user_id, type, legs, sets, bet)
-      values($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING id;
       `,
       [userId, type, legs, sets, bet],
@@ -112,7 +112,7 @@ export class GameRepository {
     const [response, err] = await queryId(
       `
       UPDATE game
-      SET started_at = CURRENT_TIMESTAMP, game_player_id = $1
+      SET started_at = CURRENT_TIMESTAMP, game_player_id = $1, current_leg = 1, current_set = 1
       WHERE id = $2
       RETURNING id;
       `,

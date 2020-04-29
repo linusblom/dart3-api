@@ -52,10 +52,12 @@ CREATE TABLE IF NOT EXISTS game (
   id              SERIAL,
   user_id         CHAR(30)  NOT NULL,
   type            game_type NOT NULL,
-  legs            SMALLINT  DEFAULT 1,
-  sets            SMALLINT  DEFAULT 1,
+  legs            SMALLINT  DEFAULT 1 CHECK (legs BETWEEN 1 AND 3),
+  sets            SMALLINT  DEFAULT 1 CHECK (sets BETWEEN 1 AND 3),
   bet             SMALLINT  NOT NULL,
   game_player_id  INTEGER,
+  current_leg     SMALLINT  DEFAULT 0 CHECK (current_leg <= 3),
+  current_set     SMALLINT  DEFAULT 0 CHECK (current_set <= 3),
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   started_at      TIMESTAMP,
   ended_at        TIMESTAMP,
@@ -67,12 +69,13 @@ CREATE TABLE IF NOT EXISTS game_player (
   game_id   INTEGER,
   player_id INTEGER,
   turn      SMALLINT,
-  legs      SMALLINT  DEFAULT 0,
-  sets      SMALLINT  DEFAULT 0,
-  score     SMALLINT  DEFAULT 0,
+  legs      SMALLINT  DEFAULT 0 CHECK (legs <= 3),
+  sets      SMALLINT  DEFAULT 0 CHECK (sets <= 3),
+  total     SMALLINT  DEFAULT 0,
   position  SMALLINT  DEFAULT 0,
   xp        SMALLINT  DEFAULT 0,
   win       SMALLINT  DEFAULT 0,
+  gems      SMALLINT  DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (game_id) REFERENCES game (id),
   FOREIGN KEY (player_id) REFERENCES player (id),
@@ -84,21 +87,16 @@ ALTER TABLE game ADD FOREIGN KEY (game_player_id) REFERENCES game_player (id);
 CREATE TABLE IF NOT EXISTS game_score (
   id              SERIAL,
   game_player_id  INTEGER,
-  leg             SMALLINT  NOT NULL,
-  set             SMALLINT  NOT NULL,
-  valid           BOOLEAN   NOT NULL,
+  dart            SMALLINT  NOT NULL CHECK (dart BETWEEN 1 AND 3),
+  round           SMALLINT  NOT NULL CHECK (round > 0),
+  leg             SMALLINT  NOT NULL CHECK (leg BETWEEN 1 AND 3),
+  set             SMALLINT  NOT NULL CHECK (set BETWEEN 1 AND 3),
+  value           SMALLINT  NOT NULL CHECK (score BETWEEN 1 AND 25),
+  multiplier      SMALLINT  NOT NULL CHECK (multiplier BETWEEN 1 AND 3),
+  total           SMALLINT  NOT NULL CHECK (total <= 180),
   PRIMARY KEY (id),
-  FOREIGN KEY (game_player_id) REFERENCES game_player (id)
-);
-
-CREATE TABLE IF NOT EXISTS game_dart (
-  id            SERIAL,
-  game_score_id INTEGER,
-  dart          SMALLINT  NOT NULL,
-  score         SMALLINT  NOT NULL,
-  multiplier    SMALLINT  NOT NULL,
-  PRIMARY KEY (id),
-  FOREIGN KEY (game_score_id) REFERENCES game_score (id)
+  FOREIGN KEY (game_player_id) REFERENCES game_player (id),
+  UNIQUE(game_player_id, dart, round, leg, set)
 );
 
 CREATE TABLE IF NOT EXISTS jackpot (
@@ -127,7 +125,7 @@ CREATE TRIGGER new_transaction AFTER INSERT ON transaction FOR EACH ROW EXECUTE 
 CREATE OR REPLACE FUNCTION init_player_balace()
   RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO transaction (player_id, type, balance) values(NEW.id, 'system', 0);
+  INSERT INTO transaction (player_id, type, balance) VALUES (NEW.id, 'system', 0);
   RETURN NEW;
 END; $$ language plpgsql;
 
