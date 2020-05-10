@@ -2,15 +2,15 @@ import { Context } from 'koa';
 import { GamePlayer } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { queryAll, transaction, queryOne } from '../database';
+import { queryAll, transaction, queryOne, queryVoid } from '../database';
 import { errorResponse } from '../utils';
-import { SQLError } from '../enums';
+import { SQLErrorCode } from '../models';
 
 export class GamePlayerRepository {
-  async getByGameId(ctx: Context, gameId: number): Promise<GamePlayer[]> {
-    const [response, err] = await queryAll(
+  async getByGameId(ctx: Context, gameId: number) {
+    const [response, err] = await queryAll<GamePlayer>(
       `
-      SELECT id, player_id, turn, legs, sets, total, position, xp, win, gems
+      SELECT id, player_id, connected_id, turn, legs, sets, total, position, xp, win, gems
       FROM game_player
       WHERE game_id = $1
       ORDER BY turn;
@@ -25,10 +25,10 @@ export class GamePlayerRepository {
     return response;
   }
 
-  async getById(ctx: Context, gamePlayerId: number): Promise<GamePlayer> {
-    const [response, err] = await queryOne(
+  async getById(ctx: Context, gamePlayerId: number) {
+    const [response, err] = await queryOne<GamePlayer>(
       `
-      SELECT id, player_id, turn, legs, sets, total, position, xp, win, gems
+      SELECT id, player_id, connected_id, turn, legs, sets, total, position, xp, win, gems
       FROM game_player
       WHERE id = $1;
       `,
@@ -42,16 +42,10 @@ export class GamePlayerRepository {
     return response;
   }
 
-  async create(
-    ctx: Context,
-    gameId: number,
-    total: number,
-    bet: number,
-    playerId: number,
-  ): Promise<number> {
-    const [response, err] = await transaction([
+  async create(ctx: Context, gameId: number, total: number, bet: number, playerId: number) {
+    const [_, err] = await transaction([
       {
-        query: `INSERT INTO game_player (game_id, player_id, total) VALUES ($1, $2, $3) RETURNING id;`,
+        query: `INSERT INTO game_player (game_id, player_id, total) VALUES ($1, $2, $3);`,
         params: [gameId, playerId, total],
       },
       {
@@ -61,8 +55,7 @@ export class GamePlayerRepository {
           FROM transaction
           WHERE player_id = $1
           ORDER BY created_at DESC
-          LIMIT 1
-          RETURNING id;
+          LIMIT 1;
         `,
         params: [playerId, bet, `Game ${gameId}`],
       },
@@ -70,11 +63,11 @@ export class GamePlayerRepository {
 
     if (err) {
       switch (err.code) {
-        case SQLError.CheckViolation:
+        case SQLErrorCode.CheckViolation:
           return errorResponse(ctx, httpStatusCodes.NOT_ACCEPTABLE, {
             message: 'Insufficient Funds',
           });
-        case SQLError.UniqueViolation:
+        case SQLErrorCode.UniqueViolation:
           return errorResponse(ctx, httpStatusCodes.CONFLICT, {
             message: 'Player already in game',
           });
@@ -83,11 +76,11 @@ export class GamePlayerRepository {
       }
     }
 
-    return response;
+    return;
   }
 
   async delete(ctx: Context, gameId: number, bet: number, playerId: number) {
-    const [response, err] = await transaction([
+    const [_, err] = await transaction([
       {
         query: `DELETE FROM game_player WHERE game_id = $1 AND player_id = $2 RETURNING id;`,
         params: [gameId, playerId],
@@ -99,8 +92,7 @@ export class GamePlayerRepository {
           FROM transaction
           WHERE player_id = $1
           ORDER BY created_at DESC
-          LIMIT 1
-          RETURNING id;
+          LIMIT 1;
         `,
         params: [playerId, bet, `Game ${gameId}`],
       },
@@ -110,6 +102,23 @@ export class GamePlayerRepository {
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
     }
 
-    return response;
+    return;
+  }
+
+  async updateTotal(ctx: Context, gamePlayerId: number, total: number, xp: number) {
+    const err = await queryVoid(
+      `
+      UPDATE game_player
+      SET total = $1, xp = xp + $2
+      WHERE id = $3;
+      `,
+      [total, xp, gamePlayerId],
+    );
+
+    if (err) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    }
+
+    return;
   }
 }

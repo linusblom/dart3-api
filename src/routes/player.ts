@@ -19,7 +19,7 @@ router
     '/:playerId',
     async (ctx: Context) => await ctrl.getById(ctx, ctx.state.userId, ctx.params.playerId),
   )
-  .patch(
+  .put(
     '/:playerId',
     validate(updatePlayerSchema),
     async (ctx: Context) =>

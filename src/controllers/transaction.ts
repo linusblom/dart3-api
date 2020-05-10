@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { TransactionPayload, TransactionType } from 'dart3-sdk';
+import { TransactionPayload, TransactionType, Transaction } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { TransactionRepository, PlayerRepository } from '../repositories';
@@ -7,16 +7,16 @@ import { response, errorResponse } from '../utils';
 
 export class TransactionController {
   constructor(
-    private repo = new TransactionRepository(),
+    private transactionRepo = new TransactionRepository(),
     private playerRepo = new PlayerRepository(),
   ) {}
 
   async simple(ctx: Context, playerId: number, body: TransactionPayload) {
-    let transactionId: number;
+    let transaction: Transaction;
 
     switch (body.type) {
       case TransactionType.Deposit:
-        transactionId = await this.repo.credit(
+        transaction = await this.transactionRepo.credit(
           ctx,
           playerId,
           TransactionType.Deposit,
@@ -25,7 +25,7 @@ export class TransactionController {
         );
         break;
       case TransactionType.Withdrawal:
-        transactionId = await this.repo.debit(
+        transaction = await this.transactionRepo.debit(
           ctx,
           playerId,
           TransactionType.Withdrawal,
@@ -36,8 +36,6 @@ export class TransactionController {
       default:
         return errorResponse(ctx, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
     }
-
-    const transaction = await this.repo.getById(ctx, transactionId, playerId);
 
     return response(ctx, httpStatusCodes.OK, transaction);
   }
@@ -55,8 +53,7 @@ export class TransactionController {
 
     const fromPlayer = await this.playerRepo.getById(ctx, userId, fromPlayerId);
     const toPlayer = await this.playerRepo.getById(ctx, userId, toPlayerId);
-    const transactionId = await this.repo.transfer(ctx, fromPlayer, toPlayer, body.amount);
-    const transaction = await this.repo.getById(ctx, transactionId, fromPlayerId);
+    const transaction = await this.transactionRepo.transfer(ctx, fromPlayer, toPlayer, body.amount);
 
     return response(ctx, httpStatusCodes.OK, transaction);
   }

@@ -7,21 +7,28 @@ import { response, errorResponse } from '../utils';
 
 export class GameController {
   constructor(
-    private repo = new GameRepository(),
+    private gameRepo = new GameRepository(),
     private gamePlayerRepo = new GamePlayerRepository(),
   ) {}
 
   async create(ctx: Context, userId: string, body: CreateGame) {
-    const currentGame = await this.repo.getCurrentGame(ctx, userId);
+    const currentGame = await this.gameRepo.getCurrentGame(ctx, userId);
 
     if (currentGame) {
       return errorResponse(ctx, httpStatusCodes.CONFLICT);
     }
 
-    const gameId = await this.repo.create(ctx, userId, body.type, body.legs, body.sets, body.bet);
+    const game = await this.gameRepo.create(
+      ctx,
+      userId,
+      body.type,
+      body.legs,
+      body.sets,
+      body.bet,
+      body.variant,
+    );
 
-    const game = await this.repo.getById(ctx, userId, gameId);
-    const players = await this.gamePlayerRepo.get(ctx, gameId);
+    const players = await this.gamePlayerRepo.getById(ctx, game.id);
 
     return response(ctx, httpStatusCodes.CREATED, { ...game, players });
   }

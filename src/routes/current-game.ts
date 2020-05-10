@@ -3,7 +3,7 @@ import Router from 'koa-router';
 
 import { CurrentGameController } from '../controllers';
 import { pin, validate } from '../middlewares';
-import { createGamePlayerSchema, createRound } from '../schemas';
+import { createGamePlayerSchema, submitRoundSchema } from '../schemas';
 
 const router = new Router();
 const ctrl = new CurrentGameController();
@@ -25,8 +25,8 @@ router
   .patch('/start', async (ctx: Context) => await ctrl.start(ctx, ctx.state.gameUtils))
   .post(
     '/round',
-    validate(createRound),
-    async (ctx: Context) => await ctrl.createRound(ctx, ctx.state.gameUtils, ctx.request.body),
+    validate(submitRoundSchema),
+    async (ctx: Context) => await ctrl.submitRound(ctx, ctx.state.gameUtils, ctx.request.body),
   );
 
 export default router;

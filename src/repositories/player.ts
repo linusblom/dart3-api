@@ -2,14 +2,14 @@ import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 import { Player } from 'dart3-sdk';
 
-import { queryAll, queryOne, queryId } from '../database';
+import { queryAll, queryOne, queryVoid } from '../database';
 import { errorResponse } from '../utils';
 
 export class PlayerRepository {
-  async get(ctx: Context, userId: string): Promise<Player[]> {
-    const [response, err] = await queryAll(
+  async get(ctx: Context, userId: string) {
+    const [response, err] = await queryAll<Player>(
       `
-      SELECT id, name, email, balance, created_at, deleted_at, color, avatar, xp
+      SELECT id, name, email, balance, created_at, deleted_at, color, avatar, xp, pro
       FROM player
       WHERE user_id = $1 AND deleted_at IS NULL;
       `,
@@ -23,10 +23,10 @@ export class PlayerRepository {
     return response;
   }
 
-  async getById(ctx: Context, userId: string, playerId: number): Promise<Player> {
-    const [response, err] = await queryOne(
+  async getById(ctx: Context, userId: string, playerId: number) {
+    const [response, err] = await queryOne<Player>(
       `
-      SELECT p.id, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, SUM(t.bet) - SUM(t.refund) AS turn_over, SUM(t.win) - SUM(t.bet) + SUM(t.refund) AS net
+      SELECT p.id, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, p.pro, SUM(t.bet) - SUM(t.refund) AS turn_over, SUM(t.win) - SUM(t.bet) + SUM(t.refund) AS net
       FROM player AS p
       LEFT JOIN (
         SELECT player_id,
@@ -63,12 +63,12 @@ export class PlayerRepository {
     color: string,
     avatar: string,
     pin: string,
-  ): Promise<number> {
-    const [response, err] = await queryId(
+  ) {
+    const [response, err] = await queryOne<Player>(
       `
       INSERT INTO player (user_id, name, email, color, avatar, pin)
       VALUES ($1, $2, $3, $4, $5, crypt($6, gen_salt('bf')))
-      RETURNING id;
+      RETURNING id, name, email, balance, created_at, deleted_at, color, avatar, xp, pro, 0 AS turn_over, 0 AS net;
       `,
       [userId, name, email, color, avatar, pin],
     );
@@ -80,31 +80,29 @@ export class PlayerRepository {
     return response;
   }
 
-  async update(ctx: Context, userId: string, playerId: number, name: string): Promise<number> {
-    const [response, err] = await queryId(
+  async update(ctx: Context, userId: string, playerId: number, name: string, pro: boolean) {
+    const err = await queryVoid(
       `
       UPDATE player
-      SET name = $1
-      WHERE user_id = $2 AND id = $3 AND deleted_at IS NULL
-      RETURNING id;
+      SET name = $1, pro = $2
+      WHERE user_id = $3 AND id = $4 AND deleted_at IS NULL;
       `,
-      [name, userId, playerId],
+      [name, pro, userId, playerId],
     );
 
     if (err) {
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
     }
 
-    return response;
+    return;
   }
 
-  async updatePin(ctx: Context, userId: string, playerId: number, pin: string): Promise<number> {
-    const [response, err] = await queryId(
+  async updatePin(ctx: Context, userId: string, playerId: number, pin: string) {
+    const err = await queryVoid(
       `
       UPDATE player
       SET pin = crypt($1, gen_salt('bf'))
-      WHERE user_id = $2 AND id = $3 AND deleted_at IS NULL
-      RETURNING id;
+      WHERE user_id = $2 AND id = $3 AND deleted_at IS NULL;
       `,
       [pin, userId, playerId],
     );
@@ -113,16 +111,15 @@ export class PlayerRepository {
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
     }
 
-    return response;
+    return;
   }
 
-  async delete(ctx: Context, userId: string, playerId: number): Promise<number> {
-    const [response, err] = await queryId(
+  async delete(ctx: Context, userId: string, playerId: number) {
+    const err = await queryVoid(
       `
       UPDATE player
       SET deleted_at = CURRENT_TIMESTAMP
-      WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL
-      RETURNING id;
+      WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL;
       `,
       [userId, playerId],
     );
@@ -131,6 +128,6 @@ export class PlayerRepository {
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
     }
 
-    return response;
+    return;
   }
 }

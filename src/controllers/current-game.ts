@@ -3,12 +3,12 @@ import { CreateGamePlayer, Game, Score } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { GameRepository, GamePlayerRepository, GameScoreRepository } from '../repositories';
-import { response, errorResponse } from '../utils';
-import { GameUtils } from '../game-utils';
+import { response, errorResponse, gemRandomizer } from '../utils';
+import { GameUtils } from '../game-utils/game';
 
 export class CurrentGameController {
   constructor(
-    private repo = new GameRepository(),
+    private gameRepo = new GameRepository(),
     private gamePlayerRepo = new GamePlayerRepository(),
     private gameScoreRepo = new GameScoreRepository(),
   ) {}
@@ -57,7 +57,7 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    await this.repo.delete(ctx, utils.game.id);
+    await this.gameRepo.delete(ctx, utils.game.id);
 
     return response(ctx, httpStatusCodes.OK);
   }
@@ -67,20 +67,19 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    await this.repo.start(ctx, utils.game.id);
+    await this.gameRepo.start(ctx, utils.game.id, utils.game.variant);
 
     return response(ctx, httpStatusCodes.OK);
   }
 
-  async createRound(ctx: Context, utils: GameUtils, body: { scores: Score[] }) {
+  async submitRound(ctx: Context, utils: GameUtils, body: { scores: Score[] }) {
     if (!utils.game.startedAt) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    const { gamePlayerId, currentLeg, currentSet, type } = utils.game;
-    const round = await this.gameScoreRepo.getGamePlayerCurrentRound(ctx, gamePlayerId);
-    const player = await this.gamePlayerRepo.getById(ctx, gamePlayerId);
-    const scores = utils.getScoreTotal(body.scores, round, player.total);
+    const round = await this.gameScoreRepo.getGamePlayerCurrentRound(ctx, utils.game.gamePlayerId);
+    const player = await this.gamePlayerRepo.getById(ctx, utils.game.gamePlayerId);
+    const { scores, total, xp } = utils.getRoundScore(body.scores, round, player.total);
 
     await Promise.all(
       scores.map(async (score, index) =>
@@ -89,13 +88,25 @@ export class CurrentGameController {
           utils.game.gamePlayerId,
           index + 1,
           round,
-          currentLeg,
-          currentSet,
+          utils.game.currentLeg,
+          utils.game.currentSet,
           score,
+          gemRandomizer(round),
         ),
       ),
     );
 
-    return response(ctx, httpStatusCodes.OK);
+    await this.gamePlayerRepo.updateTotal(ctx, utils.game.gamePlayerId, total, xp);
+    const gameScores = await this.gameScoreRepo.getByGamePlayerId(ctx, utils.game.gamePlayerId);
+    const { gamePlayerId, lastTurn } = await this.gameRepo.nextPlayer(ctx, utils.game.id);
+
+    if (lastTurn && utils.runLastTurn(round, total)) {
+      const players = this.gamePlayerRepo.getByGameId(ctx, utils.game.id);
+    }
+
+    return response(ctx, httpStatusCodes.OK, {
+      gamePlayerId,
+      player: { ...player, total, xp: player.xp + xp, scores: gameScores },
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { GameType, Score, ScoreTotal, Game } from 'dart3-sdk';
+import { GameType, Score, RoundScore } from 'dart3-sdk';
 
 import { GameUtils } from './game';
 
@@ -14,7 +14,15 @@ export class X01Utils extends GameUtils {
     }
   }
 
-  getScoreTotal(scores: Score[], round: number, total: number): ScoreTotal[] {
+  getRoundScore(scores: Score[], round: number, total: number): RoundScore {
+    throw new Error('Method not implemented.');
+  }
+
+  runLastTurn(round: number, total: number): boolean {
+    throw new Error('Method not implemented.');
+  }
+
+  lastTurn(total: number, round: number, turn: number) {
     throw new Error('Method not implemented.');
   }
 }

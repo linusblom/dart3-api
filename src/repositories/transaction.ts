@@ -2,13 +2,13 @@ import { Context } from 'koa';
 import { TransactionType, Transaction, Bank, Player } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { queryOne, queryAll, queryId, transaction } from '../database';
+import { queryOne, queryAll, transaction } from '../database';
 import { errorResponse } from '../utils';
-import { SQLError } from '../enums';
+import { SQLErrorCode } from '../models';
 
 export class TransactionRepository {
-  async getUserBank(ctx: Context, userId: string): Promise<Bank> {
-    const [response, err] = await queryOne(
+  async getUserBank(ctx: Context, userId: string) {
+    const [response, err] = await queryOne<Bank>(
       `
       SELECT COALESCE(SUM(p.balance), 0.00) AS players, COALESCE(SUM(t.turn_over), 0.00) AS turn_over
       FROM player AS p
@@ -32,8 +32,8 @@ export class TransactionRepository {
     return response;
   }
 
-  async getById(ctx: Context, transactionId: number, playerId: number): Promise<Transaction> {
-    const [response, err] = await queryOne(
+  async getById(ctx: Context, transactionId: number, playerId: number) {
+    const [response, err] = await queryOne<Transaction>(
       `
       SELECT id, type, debit, credit, balance, created_at, description
       FROM transaction
@@ -53,8 +53,8 @@ export class TransactionRepository {
     return response;
   }
 
-  async getLatest(ctx: Context, playerId: number, limit = 10): Promise<Transaction[]> {
-    const [response, err] = await queryAll(
+  async getLatest(ctx: Context, playerId: number, limit = 10) {
+    const [response, err] = await queryAll<Transaction>(
       `
       SELECT id, type, debit, credit, balance, created_at, description FROM transaction
       WHERE player_id = $1
@@ -77,8 +77,8 @@ export class TransactionRepository {
     type: TransactionType,
     amount: number,
     description: string,
-  ): Promise<number> {
-    const [response, err] = await queryId(
+  ) {
+    const [response, err] = await queryOne<Transaction>(
       `
       INSERT INTO transaction (player_id, type, debit, balance, description)
       SELECT $1, $2, $3, balance - $3, $4
@@ -86,12 +86,12 @@ export class TransactionRepository {
       WHERE player_id = $1
       ORDER BY created_at DESC
       LIMIT 1
-      RETURNING id;
+      RETURNING id, type, debit, credit, balance, created_at, description;;
       `,
       [playerId, type, amount, description],
     );
 
-    if (err && err.code === SQLError.CheckViolation) {
+    if (err && err.code === SQLErrorCode.CheckViolation) {
       return errorResponse(ctx, httpStatusCodes.NOT_ACCEPTABLE, { message: 'Insufficient Funds' });
     }
 
@@ -108,8 +108,8 @@ export class TransactionRepository {
     type: TransactionType,
     amount: number,
     description: string,
-  ): Promise<number> {
-    const [response, err] = await queryId(
+  ) {
+    const [response, err] = await queryOne<Transaction>(
       `
       INSERT INTO transaction (player_id, type, credit, balance, description)
       SELECT $1, $2, $3, balance + $3, $4
@@ -117,7 +117,7 @@ export class TransactionRepository {
       WHERE player_id = $1
       ORDER BY created_at DESC
       LIMIT 1
-      RETURNING id;
+      RETURNING id, type, debit, credit, balance, created_at, description;
       `,
       [playerId, type, amount, description],
     );
@@ -129,12 +129,7 @@ export class TransactionRepository {
     return response;
   }
 
-  async transfer(
-    ctx: Context,
-    fromPlayer: Player,
-    toPlayer: Player,
-    amount: number,
-  ): Promise<number> {
+  async transfer(ctx: Context, fromPlayer: Player, toPlayer: Player, amount: number) {
     const [response, err] = await transaction([
       {
         query: `
@@ -144,7 +139,7 @@ export class TransactionRepository {
           WHERE player_id = $1
           ORDER BY created_at DESC
           LIMIT 1
-          RETURNING id;
+          RETURNING id, type, debit, credit, balance, created_at, description;
         `,
         params: [fromPlayer.id, amount, `To ${toPlayer.name}`],
       },
@@ -155,14 +150,13 @@ export class TransactionRepository {
           FROM transaction
           WHERE player_id = $1
           ORDER BY created_at DESC
-          LIMIT 1
-          RETURNING id;
+          LIMIT 1;
         `,
         params: [toPlayer.id, amount, `From ${fromPlayer.name}`],
       },
     ]);
 
-    if (err && err.code === SQLError.CheckViolation) {
+    if (err && err.code === SQLErrorCode.CheckViolation) {
       return errorResponse(ctx, httpStatusCodes.NOT_ACCEPTABLE, { message: 'Insufficient Funds' });
     }
 
@@ -170,8 +164,8 @@ export class TransactionRepository {
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
     }
 
-    const [debit] = response;
+    const [debit] = response as Transaction[];
 
-    return debit.id;
+    return debit;
   }
 }
