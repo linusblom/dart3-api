@@ -2,7 +2,7 @@ import httpStatusCodes from 'http-status-codes';
 import { Context } from 'koa';
 
 import { errorResponse } from '../utils';
-import { queryOne } from '../database';
+import { queryId } from '../database';
 
 export const pin = async (ctx: Context, next: Function) => {
   const pin = ctx.get('x-pin');
@@ -11,11 +11,10 @@ export const pin = async (ctx: Context, next: Function) => {
     return errorResponse(ctx, httpStatusCodes.FORBIDDEN);
   }
 
-  const [
-    player,
-    err,
-  ] = await queryOne(
-    'SELECT id FROM player WHERE id = $1 AND user_id = $2 AND pin = crypt($3, pin)',
+  const [response, err] = await queryId(
+    `
+    SELECT id FROM player WHERE id = $1 AND user_id = $2 AND pin = crypt($3, pin);
+    `,
     [ctx.params.playerId || ctx.request.body.playerId, ctx.state.userId, pin],
   );
 
@@ -23,5 +22,5 @@ export const pin = async (ctx: Context, next: Function) => {
     return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 
-  return player ? next() : errorResponse(ctx, httpStatusCodes.FORBIDDEN);
+  return response ? next() : errorResponse(ctx, httpStatusCodes.FORBIDDEN);
 };

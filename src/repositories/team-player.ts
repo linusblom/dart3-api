@@ -1,19 +1,18 @@
 import { Context } from 'koa';
-import { GamePlayer } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
+import { TeamPlayer } from 'dart3-sdk';
 
-import { queryAll, transaction, queryOne, queryVoid } from '../database';
-import { errorResponse } from '../utils';
+import { transaction, queryAll, queryVoid } from '../database';
 import { SQLErrorCode } from '../models';
+import { errorResponse } from '../utils';
 
-export class GamePlayerRepository {
-  async getByGameId(ctx: Context, gameId: number) {
-    const [response, err] = await queryAll<GamePlayer>(
+export class TeamPlayerRepository {
+  async getByGameId(ctx: Context, gameId: number, seed = false) {
+    const [response, err] = await queryAll<TeamPlayer>(
       `
-      SELECT id, player_id, connected_id, turn, legs, sets, total, position, xp, win, gems
-      FROM game_player
+      SELECT id, team_id, player_id, game_id, turn, xp, win, gems
+      FROM team_player
       WHERE game_id = $1
-      ORDER BY turn;
       `,
       [gameId],
     );
@@ -25,14 +24,15 @@ export class GamePlayerRepository {
     return response;
   }
 
-  async getById(ctx: Context, gamePlayerId: number) {
-    const [response, err] = await queryOne<GamePlayer>(
+  async getByGameIdWithSeed(ctx: Context, gameId: number) {
+    const [response, err] = await queryAll<TeamPlayer & { seed: number }>(
       `
-      SELECT id, player_id, connected_id, turn, legs, sets, total, position, xp, win, gems
-      FROM game_player
-      WHERE id = $1;
+      SELECT tp.id, tp.team_id, tp.player_id, tp.game_id, tp.turn, tp.xp, tp.win, tp.gems, p.seed
+      FROM team_player tp
+      LEFT JOIN player p ON tp.player_id = p.id
+      WHERE game_id = $1
       `,
-      [gamePlayerId],
+      [gameId],
     );
 
     if (err) {
@@ -42,11 +42,11 @@ export class GamePlayerRepository {
     return response;
   }
 
-  async create(ctx: Context, gameId: number, total: number, bet: number, playerId: number) {
+  async create(ctx: Context, gameId: number, playerId: number, bet: number) {
     const [_, err] = await transaction([
       {
-        query: `INSERT INTO game_player (game_id, player_id, total) VALUES ($1, $2, $3);`,
-        params: [gameId, playerId, total],
+        query: `INSERT INTO team_player (game_id, player_id) VALUES ($1, $2);`,
+        params: [gameId, playerId],
       },
       {
         query: `
@@ -79,10 +79,10 @@ export class GamePlayerRepository {
     return;
   }
 
-  async delete(ctx: Context, gameId: number, bet: number, playerId: number) {
+  async delete(ctx: Context, gameId: number, playerId: number, bet: number) {
     const [_, err] = await transaction([
       {
-        query: `DELETE FROM game_player WHERE game_id = $1 AND player_id = $2 RETURNING id;`,
+        query: `DELETE FROM team_player WHERE game_id = $1 AND player_id = $2;`,
         params: [gameId, playerId],
       },
       {
@@ -105,18 +105,26 @@ export class GamePlayerRepository {
     return;
   }
 
-  async updateTotal(ctx: Context, gamePlayerId: number, total: number, xp: number) {
-    const err = await queryVoid(
-      `
-      UPDATE game_player
-      SET total = $1, xp = xp + $2
-      WHERE id = $3;
-      `,
-      [total, xp, gamePlayerId],
+  async addTeamId(ctx: Context, teamPlayerIds: number[][], teamIds: number[]) {
+    const errors = await Promise.all(
+      teamPlayerIds.map(async (ids, index) => {
+        console.log([teamIds[index], ...ids]);
+        return await queryVoid(
+          `
+            UPDATE team_player
+            SET team_id = t.team_id, turn = t.turn
+            FROM (VALUES ${ids
+              .map((_, n) => `($1, ${n + 1}, $${n + 2})`)
+              .join(',')}) AS t(team_id, turn, team_player_id) 
+            WHERE id = t.team_player_id;
+            `,
+          [teamIds[index], ...ids],
+        );
+      }),
     );
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+    if (errors.some(err => err)) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, errors);
     }
 
     return;

@@ -1,6 +1,6 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import { Player } from 'dart3-sdk';
+import { Player, CreatePlayer, UpdatePlayer } from 'dart3-sdk';
 
 import { queryAll, queryOne, queryVoid } from '../database';
 import { errorResponse } from '../utils';
@@ -9,7 +9,7 @@ export class PlayerRepository {
   async get(ctx: Context, userId: string) {
     const [response, err] = await queryAll<Player>(
       `
-      SELECT id, name, email, balance, created_at, deleted_at, color, avatar, xp, pro
+      SELECT id, name, email, balance, created_at, deleted_at, color, avatar, xp, seed
       FROM player
       WHERE user_id = $1 AND deleted_at IS NULL;
       `,
@@ -26,7 +26,7 @@ export class PlayerRepository {
   async getById(ctx: Context, userId: string, playerId: number) {
     const [response, err] = await queryOne<Player>(
       `
-      SELECT p.id, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, p.pro, SUM(t.bet) - SUM(t.refund) AS turn_over, SUM(t.win) - SUM(t.bet) + SUM(t.refund) AS net
+      SELECT p.id, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, p.seed, SUM(t.bet) - SUM(t.refund) AS turn_over, SUM(t.win) - SUM(t.bet) + SUM(t.refund) AS net
       FROM player AS p
       LEFT JOIN (
         SELECT player_id,
@@ -58,8 +58,7 @@ export class PlayerRepository {
   async create(
     ctx: Context,
     userId: string,
-    name: string,
-    email: string,
+    player: CreatePlayer,
     color: string,
     avatar: string,
     pin: string,
@@ -68,9 +67,9 @@ export class PlayerRepository {
       `
       INSERT INTO player (user_id, name, email, color, avatar, pin)
       VALUES ($1, $2, $3, $4, $5, crypt($6, gen_salt('bf')))
-      RETURNING id, name, email, balance, created_at, deleted_at, color, avatar, xp, pro, 0 AS turn_over, 0 AS net;
+      RETURNING id, name, email, balance, created_at, deleted_at, color, avatar, xp, seed, 0 AS turn_over, 0 AS net;
       `,
-      [userId, name, email, color, avatar, pin],
+      [userId, player.name, player.email, color, avatar, pin],
     );
 
     if (err) {
@@ -80,14 +79,14 @@ export class PlayerRepository {
     return response;
   }
 
-  async update(ctx: Context, userId: string, playerId: number, name: string, pro: boolean) {
+  async update(ctx: Context, userId: string, playerId: number, player: UpdatePlayer) {
     const err = await queryVoid(
       `
       UPDATE player
-      SET name = $1, pro = $2
+      SET name = $1, seed = $2
       WHERE user_id = $3 AND id = $4 AND deleted_at IS NULL;
       `,
-      [name, pro, userId, playerId],
+      [player.name, player.seed, userId, playerId],
     );
 
     if (err) {

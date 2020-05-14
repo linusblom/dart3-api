@@ -1,5 +1,5 @@
 import Joi from '@hapi/joi';
-import { GameType, GameVariant } from 'dart3-sdk';
+import { GameType, GameMode } from 'dart3-sdk';
 
 export const createGameSchema = Joi.object({
   type: Joi.string()
@@ -11,6 +11,13 @@ export const createGameSchema = Joi.object({
       GameType.Five01SingleInDoubleOut,
       GameType.Five01DoubleInDoubleOut,
     )
+    .required(),
+  mode: Joi.string()
+    .valid(GameMode.Single, GameMode.Tournament)
+    .required(),
+  teamSize: Joi.number()
+    .min(1)
+    .max(2)
     .required(),
   legs: Joi.number()
     .min(1)
@@ -24,13 +31,4 @@ export const createGameSchema = Joi.object({
     .min(1)
     .max(500)
     .required(),
-  variant: Joi.when('type', {
-    is: [GameType.HalveIt, GameType.Legs],
-    then: Joi.string()
-      .valid(GameVariant.Single)
-      .required(),
-    otherwise: Joi.string()
-      .valid(GameVariant.Single, GameVariant.Double)
-      .required(),
-  }),
 });

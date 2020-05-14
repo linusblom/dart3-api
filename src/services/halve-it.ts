@@ -1,8 +1,8 @@
-import { Score, ScoreTotal, RoundScore, GamePlayer } from 'dart3-sdk';
+import { Score, ScoreTotal } from 'dart3-sdk';
 
-import { GameUtils } from './game';
+import { GameService } from './game';
 
-export class HalveItUtils extends GameUtils {
+export class HalveItService extends GameService {
   getStartTotal() {
     return 0;
   }
@@ -68,13 +68,13 @@ export class HalveItUtils extends GameUtils {
     };
   }
 
-  runLastTurn(round: number, _: number) {
-    return round === 8;
-  }
+  // runLastTurn(round: number, _: number) {
+  //   return round === 8;
+  // }
 
-  lastTurn(players: GamePlayer[], round: number) {
-    if (round !== 8) {
-      return null;
-    }
-  }
+  // lastTurn(players: GamePlayer[], round: number) {
+  //   if (round !== 8) {
+  //     return null;
+  //   }
+  // }
 }

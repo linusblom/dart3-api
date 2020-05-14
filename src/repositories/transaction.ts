@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { TransactionType, Transaction, Bank, Player } from 'dart3-sdk';
+import { Transaction, Bank, Player, CreateTransaction } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { queryOne, queryAll, transaction } from '../database';
@@ -56,7 +56,8 @@ export class TransactionRepository {
   async getLatest(ctx: Context, playerId: number, limit = 10) {
     const [response, err] = await queryAll<Transaction>(
       `
-      SELECT id, type, debit, credit, balance, created_at, description FROM transaction
+      SELECT id, type, debit, credit, balance, created_at, description
+      FROM transaction
       WHERE player_id = $1
       ORDER BY created_at DESC
       LIMIT $2;
@@ -71,13 +72,7 @@ export class TransactionRepository {
     return response;
   }
 
-  async debit(
-    ctx: Context,
-    playerId: number,
-    type: TransactionType,
-    amount: number,
-    description: string,
-  ) {
+  async debit(ctx: Context, playerId: number, transaction: CreateTransaction) {
     const [response, err] = await queryOne<Transaction>(
       `
       INSERT INTO transaction (player_id, type, debit, balance, description)
@@ -88,7 +83,7 @@ export class TransactionRepository {
       LIMIT 1
       RETURNING id, type, debit, credit, balance, created_at, description;;
       `,
-      [playerId, type, amount, description],
+      [playerId, transaction.type, transaction.amount, transaction.description || ''],
     );
 
     if (err && err.code === SQLErrorCode.CheckViolation) {
@@ -102,13 +97,7 @@ export class TransactionRepository {
     return response;
   }
 
-  async credit(
-    ctx: Context,
-    playerId: number,
-    type: TransactionType,
-    amount: number,
-    description: string,
-  ) {
+  async credit(ctx: Context, playerId: number, transaction: CreateTransaction) {
     const [response, err] = await queryOne<Transaction>(
       `
       INSERT INTO transaction (player_id, type, credit, balance, description)
@@ -119,7 +108,7 @@ export class TransactionRepository {
       LIMIT 1
       RETURNING id, type, debit, credit, balance, created_at, description;
       `,
-      [playerId, type, amount, description],
+      [playerId, transaction.type, transaction.amount, transaction.description || ''],
     );
 
     if (err) {

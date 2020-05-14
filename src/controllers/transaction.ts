@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { TransactionPayload, TransactionType, Transaction } from 'dart3-sdk';
+import { TransactionType, Transaction, CreateTransaction } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { TransactionRepository, PlayerRepository } from '../repositories';
@@ -11,27 +11,15 @@ export class TransactionController {
     private playerRepo = new PlayerRepository(),
   ) {}
 
-  async simple(ctx: Context, playerId: number, body: TransactionPayload) {
+  async simple(ctx: Context, playerId: number, body: CreateTransaction) {
     let transaction: Transaction;
 
     switch (body.type) {
       case TransactionType.Deposit:
-        transaction = await this.transactionRepo.credit(
-          ctx,
-          playerId,
-          TransactionType.Deposit,
-          body.amount,
-          body.description || '',
-        );
+        transaction = await this.transactionRepo.credit(ctx, playerId, body);
         break;
       case TransactionType.Withdrawal:
-        transaction = await this.transactionRepo.debit(
-          ctx,
-          playerId,
-          TransactionType.Withdrawal,
-          body.amount,
-          body.description || '',
-        );
+        transaction = await this.transactionRepo.debit(ctx, playerId, body);
         break;
       default:
         return errorResponse(ctx, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
@@ -45,7 +33,7 @@ export class TransactionController {
     userId: string,
     fromPlayerId: number,
     toPlayerId: number,
-    body: TransactionPayload,
+    body: CreateTransaction,
   ) {
     if (body.type !== TransactionType.Transfer) {
       return errorResponse(ctx, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);

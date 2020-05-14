@@ -5,7 +5,7 @@ import md5 from 'md5';
 
 import { PlayerRepository, TransactionRepository } from '../repositories';
 import { randomColor, generatePin, response } from '../utils';
-import { sendEmail, generateWelcomeEmail, generateResetPinEmail } from '../aws';
+import { sendEmail, generateResetPinEmail } from '../aws';
 
 export class PlayerController {
   constructor(
@@ -34,15 +34,7 @@ export class PlayerController {
     const avatar = `https://s.gravatar.com/avatar/${md5(body.email)}?d=identicon`;
     const pin = '1111'; // generatePin();
 
-    const player = await this.playerRepo.create(
-      ctx,
-      userId,
-      body.name,
-      body.email,
-      color,
-      avatar,
-      pin,
-    );
+    const player = await this.playerRepo.create(ctx, userId, body, color, avatar, pin);
 
     // await sendEmail(body.email, generateWelcomeEmail(body.name, pin));
 
@@ -50,7 +42,7 @@ export class PlayerController {
   }
 
   async update(ctx: Context, userId: string, playerId: number, body: UpdatePlayer) {
-    await this.playerRepo.update(ctx, userId, playerId, body.name, body.pro);
+    await this.playerRepo.update(ctx, userId, playerId, body);
 
     const player = await this.playerRepo.getById(ctx, userId, playerId);
 

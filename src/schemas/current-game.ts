@@ -1,6 +1,6 @@
 import Joi from '@hapi/joi';
 
-export const createGamePlayerSchema = Joi.object({
+export const createTeamPlayerSchema = Joi.object({
   playerId: Joi.number().required(),
 });
 

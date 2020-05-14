@@ -1,17 +1,17 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import { GameScore, ScoreTotal } from 'dart3-sdk';
+import { ScoreTotal, Hit } from 'dart3-sdk';
 
-import { queryAll, queryOne, queryVoid } from '../database';
+import { queryAll, queryVoid } from '../database';
 import { errorResponse } from '../utils';
 
-export class GameScoreRepository {
+export class HitRepository {
   async getByGameId(ctx: Context, gameId: number) {
-    const [response, err] = await queryAll<GameScore>(
+    const [response, err] = await queryAll<Hit>(
       `
-      SELECT id, game_player_id, dart, round, leg, set, value, multiplier, total, gem
-      FROM game_score
-      WHERE game_player_id IN (SELECT id FROM game_player WHERE game_id = $1)
+      SELECT id, team_id, player_id, dart, round, leg, set, value, multiplier, total, gem
+      FROM hit
+      WHERE team_id IN (SELECT id FROM team_player WHERE game_id = $1)
       ORDER BY set, leg, round, dart;
       `,
       [gameId],
@@ -24,12 +24,12 @@ export class GameScoreRepository {
     return response;
   }
 
-  async getByGamePlayerId(ctx: Context, gamePlayerId: number) {
-    const [response, err] = await queryAll<GameScore>(
+  async getByTeamId(ctx: Context, gamePlayerId: number) {
+    const [response, err] = await queryAll<Hit>(
       `
-      SELECT id, game_player_id, dart, round, leg, set, value, multiplier, total, gem
-      FROM game_score
-      WHERE game_player_id = $1
+      SELECT id, team_id, player_id, dart, round, leg, set, value, multiplier, total, gem
+      FROM hit
+      WHERE team_id = $1
       ORDER BY set, leg, round, dart;
       `,
       [gamePlayerId],
@@ -42,30 +42,31 @@ export class GameScoreRepository {
     return response;
   }
 
-  async getGamePlayerCurrentRound(ctx: Context, gamePlayerId: number) {
-    const [response, err] = await queryOne<{ round: number }>(
-      `
-      SELECT round
-      FROM game_score
-      WHERE game_player_id = $1
-      GROUP BY round
-      HAVING count(round) = 3 
-      ORDER BY round DESC
-      LIMIT 1;
-      `,
-      [gamePlayerId],
-    );
+  // async getGamePlayerCurrentRound(ctx: Context, gamePlayerId: number) {
+  //   const [response, err] = await queryOne<{ round: number }>(
+  //     `
+  //     SELECT round
+  //     FROM game_score
+  //     WHERE game_player_id = $1
+  //     GROUP BY round
+  //     HAVING count(round) = 3
+  //     ORDER BY round DESC
+  //     LIMIT 1;
+  //     `,
+  //     [gamePlayerId],
+  //   );
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
+  //   if (err) {
+  //     return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+  //   }
 
-    return response ? response.round + 1 : 1;
-  }
+  //   return response ? response.round + 1 : 1;
+  // }
 
-  async createGameScore(
+  async create(
     ctx: Context,
-    gamePlayerId: number,
+    teamId: number,
+    playerId: number,
     dart: number,
     round: number,
     leg: number,
@@ -75,10 +76,10 @@ export class GameScoreRepository {
   ) {
     const err = await queryVoid(
       `
-      INSERT INTO game_score (game_player_id, dart, round, leg, set, value, multiplier, total, gem)
+      INSERT INTO game_score (team_id, player_id, dart, round, leg, set, value, multiplier, total, gem)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
       `,
-      [gamePlayerId, dart, round, leg, set, score.value, score.multiplier, score.total, gem],
+      [teamId, playerId, dart, round, leg, set, score.value, score.multiplier, score.total, gem],
     );
 
     if (err) {
