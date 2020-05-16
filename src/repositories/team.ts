@@ -1,61 +1,35 @@
-import { Context } from 'koa';
+import { IDatabase, IMain } from 'pg-promise';
 import { Team } from 'dart3-sdk';
-import httpStatusCodes from 'http-status-codes';
 
-import { queryAll, queryOne } from '../database';
-import { errorResponse } from '../utils';
+import { team as sql } from '../database/sql';
 
 export class TeamRepository {
-  async getByGameId(ctx: Context, gameId: number) {
-    const [response, err] = await queryAll<Team>(
-      `
-      SELECT id, game_id, legs, sets, total, position
-      FROM team
-      WHERE game_id = $1;
-      `,
-      [gameId],
-    );
+  constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return response;
+  async findByGameId(gameId: number) {
+    return this.db.any<Team>(sql.findByGameId, { gameId });
   }
 
-  async getById(ctx: Context, teamId: number) {
-    const [response, err] = await queryOne<Team>(
-      `
-      SELECT id, game_id, legs, sets, total, position
-      FROM team
-      WHERE id = $1;
-      `,
-      [teamId],
-    );
-
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return response;
+  async findById(id: number) {
+    return this.db.oneOrNone<Team>(sql.findById, { id });
   }
 
-  async createFromTeamPlayerIds(ctx: Context, gameId: number, teamPlayerIds: number[][]) {
-    const [response, err] = await queryAll<{ id: number }>(
-      `
-      INSERT INTO team (game_id)
-      VALUES ${teamPlayerIds.map(() => '($1)').join(',')}
-      RETURNING id;
-      `,
-      [gameId],
-    );
+  // async createFromTeamPlayerIds(ctx: Context, gameId: number, teamPlayerIds: number[][]) {
+  //   const [response, err] = await queryAll<{ id: number }>(
+  //     `
+  //     INSERT INTO team (game_id)
+  //     VALUES ${teamPlayerIds.map(() => '($1)').join(',')}
+  //     RETURNING id;
+  //     `,
+  //     [gameId],
+  //   );
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
+  //   if (err) {
+  //     return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+  //   }
 
-    return response.map(({ id }) => id);
-  }
+  //   return response.map(({ id }) => id);
+  // }
 
   // async updateTotal(ctx: Context, gamePlayerId: number, total: number, xp: number) {
   //   const err = await queryVoid(

@@ -21,8 +21,8 @@ router
     '/player/:playerId',
     async (ctx: Context) =>
       await ctrl.deleteTeamPlayer(ctx, ctx.state.service, ctx.params.playerId),
-  )
-  .patch('/start', async (ctx: Context) => await ctrl.start(ctx, ctx.state.service));
+  );
+//.patch('/start', async (ctx: Context) => await ctrl.start(ctx, ctx.state.service));
 // .post(
 //   '/round',
 //   validate(submitRoundSchema),

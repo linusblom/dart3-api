@@ -1,45 +1,30 @@
-import { Context } from 'koa';
-import httpStatusCodes from 'http-status-codes';
+import { IDatabase, IMain } from 'pg-promise';
 import { ScoreTotal, Hit } from 'dart3-sdk';
 
-import { queryAll, queryVoid } from '../database';
-import { errorResponse } from '../utils';
+import { hit as sql } from '../database/sql';
 
 export class HitRepository {
-  async getByGameId(ctx: Context, gameId: number) {
-    const [response, err] = await queryAll<Hit>(
-      `
-      SELECT id, team_id, player_id, dart, round, leg, set, value, multiplier, total, gem
-      FROM hit
-      WHERE team_id IN (SELECT id FROM team_player WHERE game_id = $1)
-      ORDER BY set, leg, round, dart;
-      `,
-      [gameId],
-    );
+  constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return response;
+  async findByGameId(gameId: number) {
+    return this.db.any<Hit>(sql.findByGameId, { gameId });
   }
 
-  async getByTeamId(ctx: Context, gamePlayerId: number) {
-    const [response, err] = await queryAll<Hit>(
-      `
-      SELECT id, team_id, player_id, dart, round, leg, set, value, multiplier, total, gem
-      FROM hit
-      WHERE team_id = $1
-      ORDER BY set, leg, round, dart;
-      `,
-      [gamePlayerId],
-    );
+  async findByTeamId(teamId: number) {
+    return this.db.any<Hit>(sql.findByTeamId, { teamId });
+  }
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return response;
+  async create(
+    teamId: number,
+    playerId: number,
+    dart: number,
+    round: number,
+    leg: number,
+    set: number,
+    score: ScoreTotal,
+    gem: boolean,
+  ) {
+    return this.db.none(sql.create, { teamId, playerId, dart, round, leg, set, ...score, gem });
   }
 
   // async getGamePlayerCurrentRound(ctx: Context, gamePlayerId: number) {
@@ -62,32 +47,6 @@ export class HitRepository {
 
   //   return response ? response.round + 1 : 1;
   // }
-
-  async create(
-    ctx: Context,
-    teamId: number,
-    playerId: number,
-    dart: number,
-    round: number,
-    leg: number,
-    set: number,
-    score: ScoreTotal,
-    gem: boolean,
-  ) {
-    const err = await queryVoid(
-      `
-      INSERT INTO game_score (team_id, player_id, dart, round, leg, set, value, multiplier, total, gem)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
-      `,
-      [teamId, playerId, dart, round, leg, set, score.value, score.multiplier, score.total, gem],
-    );
-
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return;
-  }
 
   // async getGemCount(ctx: Context, gamePlayerId: number): Promise<number> {
   //   const [response, err] = await queryOne(

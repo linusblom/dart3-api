@@ -1,86 +1,49 @@
-import { Pool, QueryResult } from 'pg';
-import pino from 'pino';
+import promise from 'bluebird';
+import pgPromise, { IInitOptions, IDatabase, IMain } from 'pg-promise';
+import humps from 'humps';
 
-import { camelize } from '../utils';
-import { SQLError, Param } from '../models';
+import {
+  Extensions,
+  PlayerRepository,
+  GameRepository,
+  TransactionRepository,
+  HitRepository,
+  TeamRepository,
+  TeamPlayerRepository,
+} from '../repositories';
 
-const logger = pino();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+type ExtendedProtocol = IDatabase<Extensions> & Extensions;
 
-const stringify = (array: Param[]) => array.map(value => `${value}`);
-
-export const queryRaw = async <T>(
-  query: string,
-  params: Param[],
-): Promise<[QueryResult<T>, SQLError]> => {
-  try {
-    const response = await pool.query<T>(query, stringify(params));
-    return [response, null];
-  } catch (err) {
-    logger.info(err);
-    return [null, err];
+function camelizeColumnNames(data: any) {
+  var template = data[0];
+  for (var prop in template) {
+    var camel = humps.camelize(prop);
+    if (!(camel in template)) {
+      for (var i = 0; i < data.length; i++) {
+        var d = data[i];
+        d[camel] = d[prop];
+        delete d[prop];
+      }
+    }
   }
+}
+
+const initOptions: IInitOptions<Extensions> = {
+  promiseLib: promise,
+  extend(obj: ExtendedProtocol, dc: any) {
+    obj.player = new PlayerRepository(obj, pgp);
+    obj.transaction = new TransactionRepository(obj, pgp);
+    obj.game = new GameRepository(obj, pgp);
+    obj.hit = new HitRepository(obj, pgp);
+    obj.team = new TeamRepository(obj, pgp);
+    obj.teamPlayer = new TeamPlayerRepository(obj, pgp);
+  },
+  receive: function(data) {
+    camelizeColumnNames(data);
+  },
 };
 
-export const queryAll = async <T>(query: string, params: Param[]): Promise<[T[], SQLError]> => {
-  const [raw, err] = await queryRaw<T>(query, stringify(params));
+const pgp: IMain = pgPromise(initOptions);
+const db: ExtendedProtocol = pgp({ connectionString: process.env.DATABASE_URL, max: 30 });
 
-  if (err) {
-    return [null, err];
-  }
-
-  const rows = camelize(raw.rows) as T[];
-
-  return [rows, null];
-};
-
-export const queryOne = async <T>(query: string, params: Param[]): Promise<[T, SQLError]> => {
-  const [rows, err] = await queryAll<T>(query, stringify(params));
-
-  if (err) {
-    return [null, err];
-  }
-
-  return [rows[0], null];
-};
-
-export const queryId = async (query: string, params: Param[]): Promise<[number, SQLError]> => {
-  const [first, err] = await queryOne<{ id: number }>(query, stringify(params));
-
-  if (err) {
-    return [null, err];
-  }
-
-  return [first && first.id, null];
-};
-
-export const queryVoid = async (query: string, params: Param[]): Promise<SQLError> => {
-  const [_, err] = await queryRaw<void>(query, stringify(params));
-  return err;
-};
-
-export const transaction = async (
-  transactions: { query: string; params: Param[] }[],
-): Promise<[any[], SQLError]> => {
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-    const queries = await Promise.all(
-      transactions.map(
-        async ({ query, params }) => await client.query<{ id: number }>(query, stringify(params)),
-      ),
-    );
-    await client.query('COMMIT');
-
-    const response = queries.map(value => camelize(value.rows[0]));
-
-    return [response, null];
-  } catch (err) {
-    await client.query('ROLLBACK');
-
-    return [null, err];
-  } finally {
-    client.release();
-  }
-};
+export { db, pgp };

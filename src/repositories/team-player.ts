@@ -1,132 +1,87 @@
-import { Context } from 'koa';
-import httpStatusCodes from 'http-status-codes';
-import { TeamPlayer } from 'dart3-sdk';
+import { IDatabase, IMain } from 'pg-promise';
+import { TeamPlayer, TransactionType } from 'dart3-sdk';
 
-import { transaction, queryAll, queryVoid } from '../database';
-import { SQLErrorCode } from '../models';
-import { errorResponse } from '../utils';
+import { teamPlayer as sql, transaction as transactionSql } from '../database/sql';
 
 export class TeamPlayerRepository {
-  async getByGameId(ctx: Context, gameId: number, seed = false) {
-    const [response, err] = await queryAll<TeamPlayer>(
-      `
-      SELECT id, team_id, player_id, game_id, turn, xp, win, gems
-      FROM team_player
-      WHERE game_id = $1
-      `,
-      [gameId],
-    );
+  constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return response;
+  async findByGameId(gameId: number) {
+    return this.db.any<TeamPlayer>(sql.findByGameId, { gameId });
   }
 
-  async getByGameIdWithSeed(ctx: Context, gameId: number) {
-    const [response, err] = await queryAll<TeamPlayer & { seed: number }>(
-      `
-      SELECT tp.id, tp.team_id, tp.player_id, tp.game_id, tp.turn, tp.xp, tp.win, tp.gems, p.seed
-      FROM team_player tp
-      LEFT JOIN player p ON tp.player_id = p.id
-      WHERE game_id = $1
-      `,
-      [gameId],
-    );
+  async create(gameId: number, playerId: number, bet: number) {
+    return await this.db.tx(async tx => {
+      await tx.none(sql.create, { gameId, playerId });
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
+      await tx.one(transactionSql.debit, {
+        playerId,
+        description: `Game ${gameId}`,
+        type: TransactionType.Bet,
+        amount: bet,
+      });
 
-    return response;
+      const players: TeamPlayer[] = await tx.any(sql.findByGameId, { gameId });
+      return players;
+    });
   }
 
-  async create(ctx: Context, gameId: number, playerId: number, bet: number) {
-    const [_, err] = await transaction([
-      {
-        query: `INSERT INTO team_player (game_id, player_id) VALUES ($1, $2);`,
-        params: [gameId, playerId],
-      },
-      {
-        query: `
-          INSERT INTO transaction (player_id, type, debit, balance, description)
-          SELECT $1, 'bet', $2, balance - $2, $3
-          FROM transaction
-          WHERE player_id = $1
-          ORDER BY created_at DESC
-          LIMIT 1;
-        `,
-        params: [playerId, bet, `Game ${gameId}`],
-      },
-    ]);
+  async delete(gameId: number, playerId: number, bet: number) {
+    return await this.db.tx(async tx => {
+      await tx.one(sql.delete, { gameId, playerId });
 
-    if (err) {
-      switch (err.code) {
-        case SQLErrorCode.CheckViolation:
-          return errorResponse(ctx, httpStatusCodes.NOT_ACCEPTABLE, {
-            message: 'Insufficient Funds',
-          });
-        case SQLErrorCode.UniqueViolation:
-          return errorResponse(ctx, httpStatusCodes.CONFLICT, {
-            message: 'Player already in game',
-          });
-        default:
-          return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-      }
-    }
+      await tx.one(transactionSql.credit, {
+        playerId,
+        description: `Game ${gameId}`,
+        type: TransactionType.Refund,
+        amount: bet,
+      });
 
-    return;
+      const players: TeamPlayer[] = await tx.any(sql.findByGameId, { gameId });
+      return players;
+    });
   }
 
-  async delete(ctx: Context, gameId: number, playerId: number, bet: number) {
-    const [_, err] = await transaction([
-      {
-        query: `DELETE FROM team_player WHERE game_id = $1 AND player_id = $2;`,
-        params: [gameId, playerId],
-      },
-      {
-        query: `
-          INSERT INTO transaction (player_id, type, credit, balance, description)
-          SELECT $1, 'refund', $2, balance + $2, $3
-          FROM transaction
-          WHERE player_id = $1
-          ORDER BY created_at DESC
-          LIMIT 1;
-        `,
-        params: [playerId, bet, `Game ${gameId}`],
-      },
-    ]);
+  // async getByGameIdWithSeed(ctx: Context, gameId: number) {
+  //   const [response, err] = await queryAll<TeamPlayer & { seed: number }>(
+  //     `
+  //     SELECT tp.id, tp.team_id, tp.player_id, tp.game_id, tp.turn, tp.xp, tp.win, tp.gems, p.seed
+  //     FROM team_player tp
+  //     LEFT JOIN player p ON tp.player_id = p.id
+  //     WHERE game_id = $1
+  //     `,
+  //     [gameId],
+  //   );
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
+  //   if (err) {
+  //     return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
+  //   }
 
-    return;
-  }
+  //   return response;
+  // }
 
-  async addTeamId(ctx: Context, teamPlayerIds: number[][], teamIds: number[]) {
-    const errors = await Promise.all(
-      teamPlayerIds.map(async (ids, index) => {
-        console.log([teamIds[index], ...ids]);
-        return await queryVoid(
-          `
-            UPDATE team_player
-            SET team_id = t.team_id, turn = t.turn
-            FROM (VALUES ${ids
-              .map((_, n) => `($1, ${n + 1}, $${n + 2})`)
-              .join(',')}) AS t(team_id, turn, team_player_id) 
-            WHERE id = t.team_player_id;
-            `,
-          [teamIds[index], ...ids],
-        );
-      }),
-    );
+  // async addTeamId(ctx: Context, teamPlayerIds: number[][], teamIds: number[]) {
+  //   const errors = await Promise.all(
+  //     teamPlayerIds.map(async (ids, index) => {
+  //       console.log([teamIds[index], ...ids]);
+  //       return await queryVoid(
+  //         `
+  //           UPDATE team_player
+  //           SET team_id = t.team_id, turn = t.turn
+  //           FROM (VALUES ${ids
+  //             .map((_, n) => `($1, ${n + 1}, $${n + 2})`)
+  //             .join(',')}) AS t(team_id, turn, team_player_id)
+  //           WHERE id = t.team_player_id;
+  //           `,
+  //         [teamIds[index], ...ids],
+  //       );
+  //     }),
+  //   );
 
-    if (errors.some(err => err)) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, errors);
-    }
+  //   if (errors.some(err => err)) {
+  //     return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, errors);
+  //   }
 
-    return;
-  }
+  //   return;
+  // }
 }

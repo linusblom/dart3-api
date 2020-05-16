@@ -1,0 +1,2 @@
+INSERT INTO game_score (team_id, player_id, dart, round, leg, set, value, multiplier, total, gem)
+VALUES (${teamId}, ${playerId}, ${dart}, ${round}, ${leg}, ${set}, ${value}, ${multiplier}, ${total}, ${gem});

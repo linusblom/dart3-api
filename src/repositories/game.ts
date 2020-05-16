@@ -1,102 +1,29 @@
-import { Context } from 'koa';
-import { Game, CreateGame } from 'dart3-sdk';
-import httpStatusCodes from 'http-status-codes';
+import { IDatabase, IMain } from 'pg-promise';
+import { CreateGame, Game } from 'dart3-sdk';
 
-import { queryOne, queryVoid } from '../database';
-import { errorResponse } from '../utils';
-import { SQLErrorCode } from '../models';
+import { game as sql } from '../database/sql';
 
 export class GameRepository {
-  async getById(ctx: Context, userId: string, gameId: number) {
-    const [response, err] = await queryOne<Game>(
-      `
-      SELECT id, type, mode, team_size, legs, sets, bet, current_team_id, current_leg, current_set, created_at, started_at, ended_at
-      FROM game
-      WHERE id = $1 AND user_id = $2;
-      `,
-      [gameId, userId],
-    );
+  constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    if (!response) {
-      return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
-    }
-
-    return response;
+  async findById(userId: string, id: number) {
+    return this.db.oneOrNone<Game>(sql.findById, { userId, id });
   }
 
-  async getCurrentGame(ctx: Context, userId: string) {
-    const [response, err] = await queryOne<Game>(
-      `
-      SELECT id, type, mode, team_size, legs, sets, bet, current_team_id, current_leg, current_set, created_at, started_at, ended_at
-      FROM game
-      WHERE user_id = $1 AND ended_at IS NULL;
-      `,
-      [userId],
-    );
-
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return response;
+  async findCurrent(userId: string) {
+    return this.db.oneOrNone<Game>(sql.findCurrent, { userId });
   }
 
-  async create(ctx: Context, userId: string, game: CreateGame) {
-    const [response, err] = await queryOne<Game>(
-      `
-      INSERT INTO game (user_id, type, mode, team_size, legs, sets, bet)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, type, mode, team_size, legs, sets, bet, current_team_id, current_leg, current_set, created_at, started_at, ended_at;
-      `,
-      [userId, game.type, game.mode, game.teamSize, game.legs, game.sets, game.bet],
-    );
-
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return response;
+  async create(userId: string, game: CreateGame) {
+    return this.db.one<Game>(sql.create, { userId, ...game });
   }
 
-  async delete(ctx: Context, gameId: number) {
-    const err = await queryVoid(
-      `
-      DELETE FROM game
-      WHERE id = $1 AND started_at IS NULL;
-      `,
-      [gameId],
-    );
-
-    if (err && err.code === SQLErrorCode.ForeignKeyViolation) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
-
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return;
+  async delete(id: number) {
+    return this.db.none(sql.delete, { id });
   }
 
-  async start(ctx: Context, gameId: number, startTeamId: number) {
-    const err = await queryVoid(
-      `
-      UPDATE game
-      SET started_at = CURRENT_TIMESTAMP, current_team_id = $1
-      WHERE id = $2;
-      `,
-      [startTeamId, gameId],
-    );
-
-    if (err) {
-      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, err);
-    }
-
-    return;
+  async start(id: number, currentTeamId: number) {
+    return this.db.none(sql.start, { id, currentTeamId });
   }
 
   // async start(ctx: Context, gameId: number, variant: GameVariant) {

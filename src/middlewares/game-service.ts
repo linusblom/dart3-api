@@ -3,8 +3,9 @@ import { Context } from 'koa';
 import { Game, GameType } from 'dart3-sdk';
 
 import { errorResponse } from '../utils';
-import { queryOne } from '../database';
+import { db } from '../database';
 import { GameService, X01Service, LegsService, HalveItService } from '../services';
+import { game as sql } from '../database/sql';
 
 const getGameService = (game: Game): GameService => {
   switch (game.type) {
@@ -21,24 +22,15 @@ const getGameService = (game: Game): GameService => {
 };
 
 export const gameService = async (ctx: Context, next: Function) => {
-  const [response, err] = await queryOne<Game>(
-    `
-    SELECT id, type, mode, team_size, legs, sets, bet, current_team_id, current_leg, current_set, created_at, started_at, ended_at
-    FROM game
-    WHERE user_id = $1 AND ended_at IS NULL;
-    `,
-    [ctx.state.userId],
-  );
+  let game: Game;
 
-  if (err) {
-    return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR);
+  try {
+    game = await db.one(sql.findCurrent, { userId: ctx.state.userId });
+  } catch (err) {
+    errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
   }
 
-  if (!response) {
-    return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-  }
-
-  const service = getGameService(response);
+  const service = getGameService(game);
 
   ctx.state = { ...ctx.state, service };
 

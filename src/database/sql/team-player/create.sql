@@ -1,0 +1,1 @@
+INSERT INTO team_player (game_id, player_id) VALUES (${gameId}, ${playerId});
