@@ -1,5 +1,5 @@
 import Joi from '@hapi/joi';
-import { GameType, GameMode } from 'dart3-sdk';
+import { GameType } from 'dart3-sdk';
 
 export const createGameSchema = Joi.object({
   type: Joi.string()
@@ -12,9 +12,7 @@ export const createGameSchema = Joi.object({
       GameType.Five01DoubleInDoubleOut,
     )
     .required(),
-  mode: Joi.string()
-    .valid(GameMode.Single, GameMode.Tournament)
-    .required(),
+  tournament: Joi.boolean().required(),
   teamSize: Joi.number()
     .min(1)
     .max(2)

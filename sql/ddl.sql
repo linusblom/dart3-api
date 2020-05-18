@@ -49,23 +49,15 @@ CREATE TYPE game_type AS ENUM (
   '501_di_do'
 );
 
-CREATE TYPE game_mode AS ENUM (
-  'single',
-  'tournament'
-);
-
 CREATE TABLE IF NOT EXISTS game (
   id                SERIAL,
   user_id           CHAR(30)      NOT NULL,
   type              game_type     NOT NULL,
-  mode              game_mode     DEFAULT 'single',
-  team_size         SMALLINT      DEFAULT 1,
-  legs              SMALLINT      DEFAULT 1 CHECK (legs BETWEEN 1 AND 3),
-  sets              SMALLINT      DEFAULT 1 CHECK (sets BETWEEN 1 AND 3),
+  tournament        BOOLEAN       NOT NULL,
+  team_size         SMALLINT      NOT NULL,
+  legs              SMALLINT      NOT NULL,
+  sets              SMALLINT      NOT NULL,
   bet               SMALLINT      NOT NULL,
-  current_team_id   INTEGER,
-  current_leg       SMALLINT      DEFAULT 1 CHECK (current_leg <= 3),
-  current_set       SMALLINT      DEFAULT 1 CHECK (current_set <= 3),
   created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at        TIMESTAMP,
   ended_at          TIMESTAMP,
@@ -75,15 +67,10 @@ CREATE TABLE IF NOT EXISTS game (
 CREATE TABLE IF NOT EXISTS team (
   id            SERIAL,
   game_id       INTEGER   NOT NULL,
-  legs          SMALLINT  DEFAULT 0 CHECK (legs <= 3),
-  sets          SMALLINT  DEFAULT 0 CHECK (sets <= 3),
-  total         SMALLINT  DEFAULT 0,
-  position      SMALLINT  DEFAULT 0,
+  win           SMALLINT  DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (game_id) REFERENCES game (id)
 );
-
-ALTER TABLE game ADD FOREIGN KEY (current_team_id) REFERENCES team (id);
 
 CREATE TABLE IF NOT EXISTS team_player (
   id            SERIAL,
@@ -92,44 +79,80 @@ CREATE TABLE IF NOT EXISTS team_player (
   game_id       INTEGER   NOT NULL,
   turn          SMALLINT,
   xp            SMALLINT  DEFAULT 0,
-  win           SMALLINT  DEFAULT 0,
-  gems          SMALLINT  DEFAULT 0,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (team_id) REFERENCES team (id),
   FOREIGN KEY (player_id) REFERENCES player (id),
-  FOREIGN KEY (game_id) REFERENCES game (id),
-  UNIQUE(player_id, game_id)
+  FOREIGN KEY (game_id) REFERENCES game (id)
 );
+
+CREATE TYPE match_status AS ENUM (
+  'waiting',
+  'ready',
+  'playing',
+  'completed'
+);
+
+CREATE TABLE IF NOT EXISTS match (
+  id                    SERIAL,
+  game_id               INTEGER       NOT NULL,
+  status                match_status  NOT NULL,
+  active_set            SMALLINT      DEFAULT 1,
+  active_leg            SMALLINT      DEFAULT 1,
+  active_round          SMALLINT      DEFAULT 1,
+  active_match_team_id  INTEGER,
+  stage                 SMALLINT      NOT NULL,
+  created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  started_at            TIMESTAMP,
+  ended_at              TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (game_id) REFERENCES game (id)
+);
+
+CREATE TABLE IF NOT EXISTS match_team (
+  id        SERIAL,
+  match_id  INTEGER   NOT NULL,
+  team_id   INTEGER   NOT NULL,
+  turn      INTEGER   NOT NULL,
+  sets      SMALLINT  DEFAULT 0,
+  legs      SMALLINT  DEFAULT 0,
+  score     SMALLINT  DEFAULT 0,
+  position  SMALLINT  DEFAULT 0,
+  gems      SMALLINT  DEFAULT 0,
+  PRIMARY KEY (id),
+  FOREIGN KEY (match_id) REFERENCES match (id),
+  FOREIGN KEY (team_id) REFERENCES team (id)
+);
+
+ALTER TABLE match ADD FOREIGN KEY (active_match_team_id) REFERENCES match_team (id);
 
 CREATE TABLE IF NOT EXISTS hit (
   id              SERIAL,
-  team_id         INTEGER,
+  match_team_id   INTEGER,
   player_id       INTEGER,
-  dart            SMALLINT  NOT NULL CHECK (dart BETWEEN 1 AND 3),
-  round           SMALLINT  NOT NULL CHECK (round > 0),
-  leg             SMALLINT  NOT NULL CHECK (leg BETWEEN 1 AND 3),
-  set             SMALLINT  NOT NULL CHECK (set BETWEEN 1 AND 3),
-  value           SMALLINT  NOT NULL CHECK (value BETWEEN 0 AND 25),
-  multiplier      SMALLINT  NOT NULL CHECK (multiplier BETWEEN 0 AND 3),
-  total           SMALLINT  NOT NULL CHECK (total <= 180),
+  dart            SMALLINT  NOT NULL,
+  round           SMALLINT  NOT NULL,
+  leg             SMALLINT  NOT NULL,
+  set             SMALLINT  NOT NULL,
+  value           SMALLINT  NOT NULL,
+  multiplier      SMALLINT  NOT NULL,
+  approved_score  SMALLINT  NOT NULL,
   gem             BOOLEAN   NOT NULL,
   PRIMARY KEY (id),
-  FOREIGN KEY (team_id) REFERENCES team (id),
+  FOREIGN KEY (match_team_id) REFERENCES match_team (id),
   FOREIGN KEY (player_id) REFERENCES player (id),
-  UNIQUE(team_id, dart, round, leg, set)
+  UNIQUE(match_team_id, dart, round, leg, set)
 );
 
 CREATE TABLE IF NOT EXISTS jackpot (
   id              SERIAL,
   user_id         CHAR(30)      NOT NULL,
-  player_id       INTEGER,
+  match_team_id   INTEGER,
   value           NUMERIC(10,2) DEFAULT 0,
   next_value      NUMERIC(10,2) DEFAULT 0,
   started_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   won_at          TIMESTAMP,
   PRIMARY KEY (id),
-  FOREIGN KEY (player_id) REFERENCES player (id)
+  FOREIGN KEY (match_team_id) REFERENCES match_team (id)
 );
 
 CREATE OR REPLACE FUNCTION update_player_balance()

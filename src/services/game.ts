@@ -1,4 +1,4 @@
-import { Game, Score, RoundScore, TeamPlayer, GameMode, TeamSize, Team } from 'dart3-sdk';
+import { Game, Score, RoundScore, TeamPlayer, TeamSize } from 'dart3-sdk';
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 
@@ -25,10 +25,10 @@ export abstract class GameService {
   }
 
   getTeamPlayerIds(ctx: Context, players: (TeamPlayer & { seed: number })[]): number[][] {
-    const { teamSize, mode } = this.game;
+    const { teamSize, tournament } = this.game;
 
     if (
-      (teamSize === TeamSize.Two || mode === GameMode.Tournament) &&
+      (teamSize === TeamSize.Two || tournament) &&
       (players.length % 2 !== 0 || players.length < 4)
     ) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);

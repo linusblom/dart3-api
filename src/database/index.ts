@@ -30,6 +30,7 @@ function camelizeColumnNames(data: any) {
 
 const initOptions: IInitOptions<Extensions> = {
   promiseLib: promise,
+  capSQL: true,
   extend(obj: ExtendedProtocol, dc: any) {
     obj.player = new PlayerRepository(obj, pgp);
     obj.transaction = new TransactionRepository(obj, pgp);

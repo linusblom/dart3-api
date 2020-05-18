@@ -33,7 +33,7 @@ export class TransactionRepository {
   }
 
   async transfer(playerId: number, receiverPlayerId: number, transaction: CreateTransaction) {
-    return await this.db.tx(async tx => {
+    return this.db.tx(async tx => {
       const player = await tx.one('SELECT name, user_id FROM player WHERE id = $1', [playerId]);
       const receiverPlayer = await tx.one(
         'SELECT name FROM player WHERE id = $1 AND user_id = $2',

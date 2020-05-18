@@ -10,7 +10,7 @@ import { SQLErrorCode } from '../models';
 
 export class PlayerController {
   async all(ctx: Context, userId: string) {
-    const players = await db.player.all(userId); // this.playerRepo.get(ctx, userId);
+    const players = await db.player.all(userId);
 
     return response(
       ctx,
@@ -48,7 +48,7 @@ export class PlayerController {
   async update(ctx: Context, userId: string, playerId: number, body: UpdatePlayer) {
     await db.player.update(userId, playerId, body);
 
-    const player = await this.findById(ctx, userId, playerId);
+    const player = await db.player.findById(userId, playerId);
 
     return response(ctx, httpStatusCodes.OK, player);
   }
@@ -58,7 +58,7 @@ export class PlayerController {
 
     await db.player.updatePin(userId, playerId, pin);
 
-    const player = await this.findById(ctx, userId, playerId);
+    const player = await db.player.findById(userId, playerId);
 
     await sendEmail(player.email, generateResetPinEmail(player.name, pin));
 

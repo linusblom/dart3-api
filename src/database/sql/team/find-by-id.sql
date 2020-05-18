@@ -1,3 +1,3 @@
-SELECT id, game_id, legs, sets, total, position
+SELECT id, game_id, win
 FROM team
 WHERE id = ${id};

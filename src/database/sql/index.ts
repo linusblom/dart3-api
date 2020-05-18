@@ -18,13 +18,10 @@ export const game = {
   delete: sql('game/delete.sql'),
   findById: sql('game/find-by-id.sql'),
   findCurrent: sql('game/find-current.sql'),
-  start: sql('game/start.sql'),
 };
 
 export const hit = {
   create: sql('hit/create.sql'),
-  findByGameId: sql('hit/find-by-game-id.sql'),
-  findByTeamId: sql('hit/find-by-team-id.sql'),
 };
 
 export const player = {
@@ -45,6 +42,7 @@ export const team = {
 export const teamPlayer = {
   create: sql('team-player/create.sql'),
   delete: sql('team-player/delete.sql'),
+  findByGameIdWithSeed: sql('team-player/find-by-game-id-with-seed.sql'),
   findByGameId: sql('team-player/find-by-game-id.sql'),
 };
 

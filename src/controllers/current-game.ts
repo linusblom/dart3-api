@@ -9,17 +9,17 @@ import { SQLErrorCode } from '../models';
 
 export class CurrentGameController {
   async get(ctx: Context, service: GameService) {
-    const teams = await db.team.findByGameId(service.game.id);
-    const hits = await db.hit.findByGameId(service.game.id);
+    // const teams = await db.team.findByGameId(service.game.id);
+    // const hits = await db.hit.findByGameId(service.game.id);
     const players = await db.teamPlayer.findByGameId(service.game.id);
 
     return response(ctx, httpStatusCodes.OK, {
       ...service.game,
-      teams: teams.map(team => ({
-        ...team,
-        hits: hits.filter(({ teamId }) => teamId === team.id),
-        players: players.filter(({ teamId }) => teamId === team.id),
-      })),
+      // teams: teams.map(team => ({
+      //   ...team,
+      //   hits: hits.filter(({ teamId }) => teamId === team.id),
+      //   players: players.filter(({ teamId }) => teamId === team.id),
+      // })),
       pendingPlayers: !service.game.startedAt ? players : [],
     });
   }
@@ -71,6 +71,22 @@ export class CurrentGameController {
     } catch (err) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
+  }
+
+  async start(ctx: Context, service: GameService) {
+    if (service.game.startedAt) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
+
+    const players = await db.teamPlayer.findByGameIdWithSeed(service.game.id);
+
+    await db.game.start(
+      service.game.id,
+      service.getTeamPlayerIds(ctx, players),
+      service.game.tournament,
+    );
+
+    return response(ctx, httpStatusCodes.OK);
   }
 }
 

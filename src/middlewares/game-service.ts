@@ -27,7 +27,7 @@ export const gameService = async (ctx: Context, next: Function) => {
   try {
     game = await db.one(sql.findCurrent, { userId: ctx.state.userId });
   } catch (err) {
-    errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    errorResponse(ctx, httpStatusCodes.NOT_FOUND);
   }
 
   const service = getGameService(game);
