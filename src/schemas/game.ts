@@ -13,10 +13,7 @@ export const createGameSchema = Joi.object({
     )
     .required(),
   tournament: Joi.boolean().required(),
-  teamSize: Joi.number()
-    .min(1)
-    .max(2)
-    .required(),
+  team: Joi.boolean().required(),
   legs: Joi.number()
     .min(1)
     .max(3)

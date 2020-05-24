@@ -15,6 +15,6 @@ export class GameController {
 
     const game = await db.game.create(userId, body);
 
-    return response(ctx, httpStatusCodes.CREATED, { ...game, teams: [], pendingPlayers: [] });
+    return response(ctx, httpStatusCodes.CREATED, { ...game, pendingPlayers: [] });
   }
 }

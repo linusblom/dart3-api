@@ -20,8 +20,13 @@ export const game = {
   findCurrent: sql('game/find-current.sql'),
 };
 
-export const hit = {
-  create: sql('hit/create.sql'),
+export const match = {
+  findActiveByGameId: sql('match/find-active-by-game-id.sql'),
+  findByGameId: sql('match/find-by-game-id.sql'),
+};
+
+export const matchTeam = {
+  findByGameId: sql('match-team/find-by-game-id.sql'),
 };
 
 export const player = {

@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS game (
   user_id           CHAR(30)      NOT NULL,
   type              game_type     NOT NULL,
   tournament        BOOLEAN       NOT NULL,
-  team_size         SMALLINT      NOT NULL,
+  team              BOOLEAN       NOT NULL,
   legs              SMALLINT      NOT NULL,
   sets              SMALLINT      NOT NULL,
   bet               SMALLINT      NOT NULL,
@@ -77,7 +77,6 @@ CREATE TABLE IF NOT EXISTS team_player (
   team_id       INTEGER,
   player_id     INTEGER   NOT NULL,
   game_id       INTEGER   NOT NULL,
-  turn          SMALLINT,
   xp            SMALLINT  DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (team_id) REFERENCES team (id),
@@ -100,19 +99,20 @@ CREATE TABLE IF NOT EXISTS match (
   active_leg            SMALLINT      DEFAULT 1,
   active_round          SMALLINT      DEFAULT 1,
   active_match_team_id  INTEGER,
+  active_player_id      INTEGER,
   stage                 SMALLINT      NOT NULL,
   created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at            TIMESTAMP,
   ended_at              TIMESTAMP,
   PRIMARY KEY (id),
-  FOREIGN KEY (game_id) REFERENCES game (id)
+  FOREIGN KEY (game_id) REFERENCES game (id),
+  FOREIGN KEY (active_player_id) REFERENCES player (id)
 );
 
 CREATE TABLE IF NOT EXISTS match_team (
   id        SERIAL,
   match_id  INTEGER   NOT NULL,
   team_id   INTEGER   NOT NULL,
-  turn      INTEGER   NOT NULL,
   sets      SMALLINT  DEFAULT 0,
   legs      SMALLINT  DEFAULT 0,
   score     SMALLINT  DEFAULT 0,
@@ -153,6 +153,20 @@ CREATE TABLE IF NOT EXISTS jackpot (
   won_at          TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (match_team_id) REFERENCES match_team (id)
+);
+
+CREATE OR REPLACE VIEW match_active_player_id AS
+SELECT m.id, m.game_id, m.status, m.active_round, m.active_set, m.active_leg, m.active_match_team_id, m.stage, m.created_at, m.started_at, m.ended_at, tp.player_id as active_player_id
+FROM match m
+LEFT JOIN match_team mt ON m.active_match_team_id = mt.id
+LEFT JOIN team_player tp ON tp.team_id = mt.team_id AND tp.player_id = (
+  SELECT player_id
+  FROM team_player
+  WHERE team_id = mt.team_id
+  ORDER BY (
+    CASE WHEN MOD(m.active_round, 2) = 1 THEN id END
+  ) ASC, id DESC
+  LIMIT 1
 );
 
 CREATE OR REPLACE FUNCTION update_player_balance()

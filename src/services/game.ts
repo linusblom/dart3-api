@@ -1,4 +1,4 @@
-import { Game, Score, RoundScore, TeamPlayer, TeamSize } from 'dart3-sdk';
+import { Game, Score, RoundScore, TeamPlayer } from 'dart3-sdk';
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 
@@ -11,8 +11,8 @@ export abstract class GameService {
     this.game = game;
   }
 
-  abstract getStartTotal(): number;
-  abstract getRoundScore(scores: Score[], round: number, total: number): RoundScore;
+  abstract getStartScore(): number;
+  abstract getRoundScore(scores: Score[], round: number, currentScore: number): RoundScore;
   // abstract runLastTurn(round: number, total: number): boolean;
   // abstract lastTurn(total: number, round: number, turn: number);
 
@@ -25,16 +25,13 @@ export abstract class GameService {
   }
 
   getTeamPlayerIds(ctx: Context, players: (TeamPlayer & { seed: number })[]): number[][] {
-    const { teamSize, tournament } = this.game;
+    const { team, tournament } = this.game;
 
-    if (
-      (teamSize === TeamSize.Two || tournament) &&
-      (players.length % 2 !== 0 || players.length < 4)
-    ) {
+    if ((team || tournament) && (players.length % 2 !== 0 || players.length < 4)) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    if (teamSize === TeamSize.One) {
+    if (!team) {
       return players.map(({ id }) => [id]).sort(arrayRandomizer);
     }
 
@@ -43,7 +40,7 @@ export abstract class GameService {
       ...players.filter(({ seed }) => seed === 2).sort(arrayRandomizer),
     ];
 
-    return Array(players.length / teamSize)
+    return Array(players.length / 2)
       .fill([])
       .map(() => [seedSortedPlayers.shift().id, seedSortedPlayers.pop().id])
       .sort(arrayRandomizer);

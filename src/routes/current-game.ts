@@ -3,7 +3,7 @@ import Router from 'koa-router';
 
 import { CurrentGameController } from '../controllers';
 import { pin, validate } from '../middlewares';
-import { createTeamPlayerSchema, submitRoundSchema } from '../schemas';
+import { createTeamPlayerSchema, createRoundSchema } from '../schemas';
 
 const router = new Router();
 const ctrl = new CurrentGameController();
@@ -22,11 +22,12 @@ router
     async (ctx: Context) =>
       await ctrl.deleteTeamPlayer(ctx, ctx.state.service, ctx.params.playerId),
   )
-  .patch('/start', async (ctx: Context) => await ctrl.start(ctx, ctx.state.service));
-// .post(
-//   '/round',
-//   validate(submitRoundSchema),
-//   async (ctx: Context) => await ctrl.submitRound(ctx, ctx.state.gameUtils, ctx.request.body),
-// );
+  .patch('/start', async (ctx: Context) => await ctrl.start(ctx, ctx.state.service))
+  .get('/match', async (ctx: Context) => await ctrl.allMatches(ctx, ctx.state.service))
+  .post(
+    '/round',
+    validate(createRoundSchema),
+    async (ctx: Context) => await ctrl.createRound(ctx, ctx.state.service, ctx.request.body),
+  );
 
 export default router;

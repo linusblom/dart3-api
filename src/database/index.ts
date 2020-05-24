@@ -10,6 +10,8 @@ import {
   HitRepository,
   TeamRepository,
   TeamPlayerRepository,
+  MatchRepository,
+  MatchTeamRepository,
 } from '../repositories';
 
 type ExtendedProtocol = IDatabase<Extensions> & Extensions;
@@ -38,6 +40,8 @@ const initOptions: IInitOptions<Extensions> = {
     obj.hit = new HitRepository(obj, pgp);
     obj.team = new TeamRepository(obj, pgp);
     obj.teamPlayer = new TeamPlayerRepository(obj, pgp);
+    obj.match = new MatchRepository(obj, pgp);
+    obj.matchTeam = new MatchTeamRepository(obj, pgp);
   },
   receive: function(data) {
     camelizeColumnNames(data);

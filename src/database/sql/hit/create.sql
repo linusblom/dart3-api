@@ -1,2 +1,0 @@
-INSERT INTO game_score (match_team_id, player_id, dart, round, leg, set, value, multiplier, appoved_score, gem)
-VALUES (${matchTeamId}, ${playerId}, ${dart}, ${round}, ${leg}, ${set}, ${value}, ${multiplier}, ${appovedScore}, ${gem});

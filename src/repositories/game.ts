@@ -22,29 +22,20 @@ export class GameRepository {
     return this.db.none(sql.delete, { id });
   }
 
-  async start(id: number, teamPlayerIds: number[][], tournament: boolean) {
+  async start(id: number, teamPlayerIds: number[][], tournament: boolean, startScore: number) {
     return this.db.tx(async tx => {
-      await tx.none('UPDATE game SET started_at = current_timestamp WHERE id = $1', [id]);
+      const { ColumnSet, update, insert } = this.pgp.helpers;
 
-      const teamIds: DbId[] = await tx.any(
-        `INSERT INTO team (game_id) VALUES ${teamPlayerIds
-          .map(() => '($1)')
-          .join(',')} RETURNING id;`,
-        [id],
-      );
+      const teamData = teamPlayerIds.map(() => ({ game_id: id }));
+      const teamCs = new ColumnSet(['game_id'], { table: 'team' });
+      const teamIds = await tx.any(`${insert(teamData, teamCs)} RETURNING id`);
 
-      const updateData = teamPlayerIds.reduce(
-        (acc, ids, index) => [
-          ...acc,
-          ...ids.map((id, n) => ({ id, team_id: teamIds[index].id, turn: n + 1 })),
-        ],
+      const teamPlayerData = teamPlayerIds.reduce(
+        (acc, ids, index) => [...acc, ...ids.map(id => ({ id, team_id: teamIds[index].id }))],
         [],
       );
-      const updateCs = new this.pgp.helpers.ColumnSet(['?id', 'team_id', 'turn'], {
-        table: 'team_player',
-      });
-
-      await tx.none(`${this.pgp.helpers.update(updateData, updateCs)} WHERE v.id = t.id`);
+      const teamPlayerCs = new ColumnSet(['?id', 'team_id'], { table: 'team_player' });
+      await tx.none(`${update(teamPlayerData, teamPlayerCs)} WHERE v.id = t.id`);
 
       let matchTeamIds: DbId[] = [];
       let matchIds: DbId[] = [];
@@ -57,24 +48,22 @@ export class GameRepository {
           [id, MatchStatus.Ready, 1],
         );
 
-        const insertData = teamIds.map(({ id }, n) => ({
+        const matchTeamData = teamIds.map(({ id }) => ({
           match_id: matchIds[0].id,
           team_id: id,
-          turn: n + 1,
+          score: startScore,
         }));
-        const insertCs = new this.pgp.helpers.ColumnSet(['match_id', 'team_id', 'turn'], {
+        const matchTeamCs = new ColumnSet(['match_id', 'team_id', 'score'], {
           table: 'match_team',
         });
-
-        matchTeamIds = await tx.any(
-          `${this.pgp.helpers.insert(insertData, insertCs)} RETURNING id`,
-        );
+        matchTeamIds = await tx.any(`${insert(matchTeamData, matchTeamCs)} RETURNING id`);
       }
 
       await tx.none(
-        `UPDATE match SET status = 'playing', started_at = current_timestamp, active_match_team_id = $1 WHERE id = $2`,
-        [matchTeamIds[0].id, matchIds[0].id],
+        `UPDATE match SET status = $1, started_at = current_timestamp, active_match_team_id = $2 WHERE id = $3`,
+        [MatchStatus.Playing, matchTeamIds[0].id, matchIds[0].id],
       );
+      await tx.none('UPDATE game SET started_at = current_timestamp WHERE id = $1', [id]);
     });
   }
 }

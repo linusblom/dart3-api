@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { CreateTeamPlayer } from 'dart3-sdk';
+import { CreateTeamPlayer, Score } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { response, errorResponse } from '../utils';
@@ -9,18 +9,15 @@ import { SQLErrorCode } from '../models';
 
 export class CurrentGameController {
   async get(ctx: Context, service: GameService) {
-    // const teams = await db.team.findByGameId(service.game.id);
-    // const hits = await db.hit.findByGameId(service.game.id);
-    const players = await db.teamPlayer.findByGameId(service.game.id);
+    if (service.game.startedAt) {
+      return response(ctx, httpStatusCodes.OK, service.game);
+    }
+
+    const pendingPlayers = await db.teamPlayer.findByGameId(service.game.id);
 
     return response(ctx, httpStatusCodes.OK, {
       ...service.game,
-      // teams: teams.map(team => ({
-      //   ...team,
-      //   hits: hits.filter(({ teamId }) => teamId === team.id),
-      //   players: players.filter(({ teamId }) => teamId === team.id),
-      // })),
-      pendingPlayers: !service.game.startedAt ? players : [],
+      pendingPlayers,
     });
   }
 
@@ -84,107 +81,35 @@ export class CurrentGameController {
       service.game.id,
       service.getTeamPlayerIds(ctx, players),
       service.game.tournament,
+      service.getStartScore(),
     );
 
     return response(ctx, httpStatusCodes.OK);
   }
+
+  async allMatches(ctx: Context, service: GameService) {
+    const matches = await db.match.findByGameId(service.game.id);
+    const teams = await db.matchTeam.findByGameId(service.game.id);
+
+    return response(
+      ctx,
+      httpStatusCodes.OK,
+      matches.map(match => ({
+        ...match,
+        teams: teams.filter(({ matchId }) => matchId === match.id),
+      })),
+    );
+  }
+
+  async createRound(ctx: Context, service: GameService, body: Score[]) {
+    if (!service.game.startedAt) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
+
+    const active = await db.match.findActiveByGameId(service.game.id);
+    const roundScore = service.getRoundScore(body, active.round, active.currentScore);
+    await db.hit.createRound(active, roundScore);
+
+    return response(ctx, httpStatusCodes.OK);
+  }
 }
-
-// constructor(
-//   private gameRepo = new GameRepository(),
-//   private teamRepo = new TeamRepository(),
-//   private hitRepo = new HitRepository(),
-//   private teamPlayerRepo = new TeamPlayerRepository(),
-// ) {}
-// async get(ctx: Context, service: GameService) {
-//   const teams = await this.teamRepo.getByGameId(ctx, service.game.id);
-//   const hits = await this.hitRepo.getByGameId(ctx, service.game.id);
-//   const players = await this.teamPlayerRepo.getByGameId(ctx, service.game.id);
-//   return response(ctx, httpStatusCodes.OK, {
-//     ...service.game,
-//     teams: teams.map(team => ({
-//       ...team,
-//       hits: hits.filter(({ teamId }) => teamId === team.id),
-//       players: players.filter(({ teamId }) => teamId === team.id),
-//     })),
-//     pendingPlayers: !service.game.startedAt ? players : [],
-//   });
-// }
-// async createTeamPlayer(ctx: Context, service: GameService, body: CreateTeamPlayer) {
-//   if (service.game.startedAt) {
-//     return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-//   }
-//   const total = service.getStartTotal();
-//   await this.teamPlayerRepo.create(ctx, service.game.id, body.playerId, service.game.bet);
-//   const players = await this.teamPlayerRepo.getByGameId(ctx, service.game.id);
-//   return response(ctx, httpStatusCodes.CREATED, { players });
-// }
-// async deleteTeamPlayer(ctx: Context, service: GameService, playerId: number) {
-//   if (service.game.startedAt) {
-//     return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-//   }
-//   await this.teamPlayerRepo.delete(ctx, service.game.id, playerId, service.game.bet);
-//   const players = await this.teamPlayerRepo.getByGameId(ctx, service.game.id);
-//   return response(ctx, httpStatusCodes.OK, { players });
-// }
-// async delete(ctx: Context, service: GameService) {
-//   if (service.game.startedAt) {
-//     return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-//   }
-//   await this.gameRepo.delete(ctx, service.game.id);
-//   return response(ctx, httpStatusCodes.OK);
-// }
-// async start(ctx: Context, service: GameService) {
-//   if (service.game.startedAt) {
-//     return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-//   }
-//   const players = await this.teamPlayerRepo.getByGameIdWithSeed(ctx, service.game.id);
-//   const teamPlayerIds = service.getTeamPlayerIds(ctx, players);
-//   const teamIds = await this.teamRepo.createFromTeamPlayerIds(
-//     ctx,
-//     service.game.id,
-//     teamPlayerIds,
-//   );
-//   await this.teamPlayerRepo.addTeamId(ctx, teamPlayerIds, teamIds);
-//   // await this.gameRepo.start(ctx, service.game.id, teamIds[0]);
-//   // await this.gameRepo.start(ctx, service.game.id, service.game.variant);
-//   return response(ctx, httpStatusCodes.OK);
-
-// async submitRound(ctx: Context, service: GameService, body: { scores: Score[] }) {
-//   if (!service.game.startedAt) {
-//     return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-//   }
-
-//   const round = await this.gameScoreRepo.getGamePlayerCurrentRound(ctx, service.game.gamePlayerId);
-//   const player = await this.gamePlayerRepo.getById(ctx, service.game.gamePlayerId);
-//   const { scores, total, xp } = service.getRoundScore(body.scores, round, player.total);
-
-//   await Promise.all(
-//     scores.map(async (score, index) =>
-//       this.gameScoreRepo.createGameScore(
-//         ctx,
-//         service.game.gamePlayerId,
-//         index + 1,
-//         round,
-//         service.game.currentLeg,
-//         service.game.currentSet,
-//         score,
-//         gemRandomizer(round),
-//       ),
-//     ),
-//   );
-
-//   await this.gamePlayerRepo.updateTotal(ctx, service.game.gamePlayerId, total, xp);
-//   const gameScores = await this.gameScoreRepo.getByGamePlayerId(ctx, service.game.gamePlayerId);
-//   const { gamePlayerId, lastTurn } = await this.gameRepo.nextPlayer(ctx, service.game.id);
-
-//   if (lastTurn && service.runLastTurn(round, total)) {
-//     const players = this.gamePlayerRepo.getByGameId(ctx, service.game.id);
-//   }
-
-//   return response(ctx, httpStatusCodes.OK, {
-//     gamePlayerId,
-//     player: { ...player, total, xp: player.xp + xp, scores: gameScores },
-//   });
-// }
-// }

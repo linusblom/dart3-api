@@ -4,6 +4,8 @@ import { GameRepository } from './game';
 import { HitRepository } from './hit';
 import { TeamRepository } from './team';
 import { TeamPlayerRepository } from './team-player';
+import { MatchRepository } from './match';
+import { MatchTeamRepository } from './match-team';
 
 interface Extensions {
   player: PlayerRepository;
@@ -12,6 +14,8 @@ interface Extensions {
   hit: HitRepository;
   team: TeamRepository;
   teamPlayer: TeamPlayerRepository;
+  match: MatchRepository;
+  matchTeam: MatchTeamRepository;
 }
 
 export {
@@ -22,4 +26,6 @@ export {
   HitRepository,
   TeamRepository,
   TeamPlayerRepository,
+  MatchRepository,
+  MatchTeamRepository,
 };

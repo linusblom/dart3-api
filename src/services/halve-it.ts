@@ -1,23 +1,23 @@
-import { Score, ScoreTotal } from 'dart3-sdk';
+import { Score, ScoreApproved } from 'dart3-sdk';
 
 import { GameService } from './game';
 
 export class HalveItService extends GameService {
-  getStartTotal() {
+  getStartScore() {
     return 0;
   }
 
   private checkValue(scores: Score[], valid: number) {
     return scores.map(score => ({
       ...score,
-      total: valid === score.value ? this.getDartTotal(score) : 0,
+      approvedScore: valid === score.value ? this.getDartTotal(score) : 0,
     }));
   }
 
   private checkMultiplier(scores: Score[], valid: number) {
     return scores.map(score => ({
       ...score,
-      total: valid === score.multiplier ? this.getDartTotal(score) : 0,
+      approvedScore: valid === score.multiplier ? this.getDartTotal(score) : 0,
     }));
   }
 
@@ -25,10 +25,13 @@ export class HalveItService extends GameService {
     const totalValid =
       this.getRoundTotal(scores) === valid && scores.filter(({ value }) => value > 0).length === 3;
 
-    return scores.map(score => ({ ...score, total: totalValid ? this.getDartTotal(score) : 0 }));
+    return scores.map(score => ({
+      ...score,
+      approvedScore: totalValid ? this.getDartTotal(score) : 0,
+    }));
   }
 
-  private getScoreTotal(scores: Score[], round: number) {
+  private getApprovedScore(scores: Score[], round: number) {
     switch (round) {
       case 1:
         return this.checkValue(scores, 19);
@@ -47,23 +50,23 @@ export class HalveItService extends GameService {
       case 8:
         return this.checkValue(scores, 25);
       default:
-        return scores.map(score => ({ ...score, total: 0 }));
+        return scores.map(score => ({ ...score, approvedScore: 0 }));
     }
   }
 
-  private getTotal(scores: ScoreTotal[], currentTotal: number) {
-    const total = scores.reduce((acc, { total }) => acc + total, 0);
+  private getNextScore(approvedScores: ScoreApproved[], currentTotal: number) {
+    const total = approvedScores.reduce((acc, { approvedScore }) => acc + approvedScore, 0);
 
     return total > 0 ? currentTotal + total : Math.ceil(currentTotal / 2);
   }
 
-  getRoundScore(scores: Score[], round: number, currentTotal: number) {
-    const scoreTotals = this.getScoreTotal(scores, round);
-    const total = this.getTotal(scoreTotals, currentTotal);
+  getRoundScore(scores: Score[], round: number, currentScore: number) {
+    const approvedScores = this.getApprovedScore(scores, round);
+    const nextScore = this.getNextScore(approvedScores, currentScore);
 
     return {
-      scores: scoreTotals,
-      total,
+      scores: approvedScores,
+      nextScore,
       xp: this.getRoundTotal(scores),
     };
   }

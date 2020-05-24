@@ -3,7 +3,7 @@ import { GameType, Score, RoundScore } from 'dart3-sdk';
 import { GameService } from './game';
 
 export class X01Service extends GameService {
-  getStartTotal(): number {
+  getStartScore(): number {
     switch (this.game.type) {
       case GameType.Five01DoubleInDoubleOut:
       case GameType.Five01SingleInDoubleOut:
@@ -14,7 +14,7 @@ export class X01Service extends GameService {
     }
   }
 
-  getRoundScore(scores: Score[], round: number, total: number): RoundScore {
+  getRoundScore(scores: Score[], round: number, currentScore: number): RoundScore {
     throw new Error('Method not implemented.');
   }
 
