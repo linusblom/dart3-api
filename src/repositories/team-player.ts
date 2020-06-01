@@ -42,7 +42,7 @@ export class TeamPlayerRepository {
     });
   }
 
-  async findByGameIdWithSeed(gameId: number) {
-    return this.db.any<TeamPlayer & { seed: number }>(sql.findByGameIdWithSeed, { gameId });
+  async findByGameIdWithPro(gameId: number) {
+    return this.db.any<TeamPlayer & { pro: boolean }>(sql.findByGameIdWithPro, { gameId });
   }
 }

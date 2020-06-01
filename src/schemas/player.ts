@@ -13,8 +13,5 @@ export const updatePlayerSchema = Joi.object({
   name: Joi.string()
     .min(3)
     .required(),
-  seed: Joi.number()
-    .min(1)
-    .max(2)
-    .required(),
+  pro: Joi.boolean().required(),
 });

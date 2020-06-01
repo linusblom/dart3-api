@@ -1,3 +1,6 @@
+import { ITask } from 'pg-promise';
+import { any } from 'bluebird';
+
 export type Param = string | number | boolean;
 
 export interface SQLError {
@@ -8,4 +11,8 @@ export enum SQLErrorCode {
   ForeignKeyViolation = '23503',
   UniqueViolation = '23505',
   CheckViolation = '23514',
+}
+
+export interface TxFn {
+  (t: any): any;
 }

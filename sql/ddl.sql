@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS player (
   color                 CHAR(7)       DEFAULT '#FFFFFF',
   avatar                VARCHAR,
   xp                    INTEGER       DEFAULT 0,
-  seed                  SMALLINT      DEFAULT 2,
+  pro                   BOOLEAN       DEFAULT false,
   PRIMARY KEY (id)
 );
 
@@ -99,7 +99,6 @@ CREATE TABLE IF NOT EXISTS match (
   active_leg            SMALLINT      DEFAULT 1,
   active_round          SMALLINT      DEFAULT 1,
   active_match_team_id  INTEGER,
-  active_player_id      INTEGER,
   stage                 SMALLINT      NOT NULL,
   created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at            TIMESTAMP,

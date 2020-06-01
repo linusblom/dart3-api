@@ -50,5 +50,6 @@ const initOptions: IInitOptions<Extensions> = {
 
 const pgp: IMain = pgPromise(initOptions);
 const db: ExtendedProtocol = pgp({ connectionString: process.env.DATABASE_URL, max: 30 });
+pgp.pg.types.setTypeParser(20, parseInt);
 
 export { db, pgp };

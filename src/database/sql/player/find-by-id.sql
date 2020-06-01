@@ -1,4 +1,4 @@
-SELECT p.id, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, p.seed, SUM(t.bet) - SUM(t.refund) AS turn_over, SUM(t.win) - SUM(t.bet) + SUM(t.refund) AS net
+SELECT p.id, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, p.pro, SUM(t.bet) - SUM(t.refund) AS turn_over, SUM(t.win) - SUM(t.bet) + SUM(t.refund) AS net
 FROM player AS p
 LEFT JOIN (
   SELECT player_id,

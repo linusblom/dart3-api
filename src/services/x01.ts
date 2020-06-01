@@ -1,4 +1,4 @@
-import { GameType, Score, RoundScore } from 'dart3-sdk';
+import { GameType, Score, RoundScore, MatchActive } from 'dart3-sdk';
 
 import { GameService } from './game';
 
@@ -18,11 +18,7 @@ export class X01Service extends GameService {
     throw new Error('Method not implemented.');
   }
 
-  // runLastTurn(round: number, total: number): boolean {
-  //   throw new Error('Method not implemented.');
-  // }
-
-  // lastTurn(total: number, round: number, turn: number) {
-  //   throw new Error('Method not implemented.');
-  // }
+  getNextRoundTx(active: MatchActive) {
+    return () => {};
+  }
 }

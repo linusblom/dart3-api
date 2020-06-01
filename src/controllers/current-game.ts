@@ -75,7 +75,7 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    const players = await db.teamPlayer.findByGameIdWithSeed(service.game.id);
+    const players = await db.teamPlayer.findByGameIdWithPro(service.game.id);
 
     await db.game.start(
       service.game.id,
@@ -90,15 +90,9 @@ export class CurrentGameController {
   async allMatches(ctx: Context, service: GameService) {
     const matches = await db.match.findByGameId(service.game.id);
     const teams = await db.matchTeam.findByGameId(service.game.id);
+    const hits = await db.hit.findRoundHitsByTeamIds(teams.map(({ id }) => id));
 
-    return response(
-      ctx,
-      httpStatusCodes.OK,
-      matches.map(match => ({
-        ...match,
-        teams: teams.filter(({ matchId }) => matchId === match.id),
-      })),
-    );
+    return response(ctx, httpStatusCodes.OK, { matches, teams, hits });
   }
 
   async createRound(ctx: Context, service: GameService, body: Score[]) {
@@ -109,7 +103,17 @@ export class CurrentGameController {
     const active = await db.match.findActiveByGameId(service.game.id);
     const roundScore = service.getRoundScore(body, active.round, active.currentScore);
     await db.hit.createRound(active, roundScore);
+    await db.match.executeNextRoundTx(service.getNextRoundTx(active));
 
-    return response(ctx, httpStatusCodes.OK);
+    const match = await db.match.findById(active.id);
+    const team = await db.matchTeam.findById(active.matchTeamId);
+    const hits = await db.hit.findRoundHitsByRounds(
+      match.id,
+      match.activeSet,
+      match.activeLeg,
+      match.activeRound,
+    );
+
+    return response(ctx, httpStatusCodes.OK, { match, team, hits });
   }
 }

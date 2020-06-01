@@ -1,10 +1,31 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { MatchActive, RoundScore } from 'dart3-sdk';
+import { MatchActive, RoundScore, RoundHit } from 'dart3-sdk';
 
+import { hit as sql } from '../database/sql';
 import { gemRandomizer } from '../utils';
 
 export class HitRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
+
+  async findRoundHitsByTeamIds(matchTeamsIds: number[]) {
+    return this.db.any<RoundHit>(sql.findRoundHitsByTeamIds, {
+      matchTeamsIds,
+    });
+  }
+
+  async findRoundHitsByRounds(
+    matchId: number,
+    activeSet: number,
+    activeLeg: number,
+    activeRound: number,
+  ) {
+    return this.db.any<RoundHit>(sql.findRoundHitsByRounds, {
+      matchId,
+      activeSet,
+      activeLeg,
+      rounds: [activeRound, ...(activeRound > 1 ? [activeRound - 1] : [])],
+    });
+  }
 
   async createRound(active: MatchActive, roundScore: RoundScore) {
     return this.db.tx(async tx => {
@@ -38,12 +59,13 @@ export class HitRepository {
         { table: 'hit' },
       );
 
-      await this.db.none(insert(matchTeamData, matchTeamCs));
-      await this.db.none(
-        'UPDATE team_player SET xp = xp + $1 WHERE team_id = $2 AND player_id = $3',
-        [roundScore.xp, active.teamId, active.playerId],
-      );
-      await this.db.none('UPDATE match_team SET score = $1, gems = gems + $2 WHERE id = $3', [
+      await tx.none(insert(matchTeamData, matchTeamCs));
+      await tx.none('UPDATE team_player SET xp = xp + $1 WHERE team_id = $2 AND player_id = $3', [
+        roundScore.xp,
+        active.teamId,
+        active.playerId,
+      ]);
+      await tx.none('UPDATE match_team SET score = $1, gems = gems + $2 WHERE id = $3', [
         roundScore.nextScore,
         matchTeamData.filter(({ gem }) => gem).length,
         active.matchTeamId,

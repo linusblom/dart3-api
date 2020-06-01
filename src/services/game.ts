@@ -1,8 +1,9 @@
-import { Game, Score, RoundScore, TeamPlayer } from 'dart3-sdk';
+import { Game, Score, RoundScore, TeamPlayer, MatchActive } from 'dart3-sdk';
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 
 import { errorResponse, arrayRandomizer } from '../utils';
+import { TxFn } from '../models';
 
 export abstract class GameService {
   game: Game;
@@ -13,8 +14,7 @@ export abstract class GameService {
 
   abstract getStartScore(): number;
   abstract getRoundScore(scores: Score[], round: number, currentScore: number): RoundScore;
-  // abstract runLastTurn(round: number, total: number): boolean;
-  // abstract lastTurn(total: number, round: number, turn: number);
+  abstract getNextRoundTx(active: MatchActive): TxFn;
 
   protected getDartTotal(score: Score) {
     return score.value * score.multiplier;
@@ -24,7 +24,7 @@ export abstract class GameService {
     return scores.reduce((total, score) => total + this.getDartTotal(score), 0);
   }
 
-  getTeamPlayerIds(ctx: Context, players: (TeamPlayer & { seed: number })[]): number[][] {
+  getTeamPlayerIds(ctx: Context, players: (TeamPlayer & { pro: boolean })[]): number[][] {
     const { team, tournament } = this.game;
 
     if ((team || tournament) && (players.length % 2 !== 0 || players.length < 4)) {
@@ -35,14 +35,14 @@ export abstract class GameService {
       return players.map(({ id }) => [id]).sort(arrayRandomizer);
     }
 
-    const seedSortedPlayers = [
-      ...players.filter(({ seed }) => seed === 1).sort(arrayRandomizer),
-      ...players.filter(({ seed }) => seed === 2).sort(arrayRandomizer),
+    const proSortedPlayers = [
+      ...players.filter(({ pro }) => pro).sort(arrayRandomizer),
+      ...players.filter(({ pro }) => !pro).sort(arrayRandomizer),
     ];
 
     return Array(players.length / 2)
       .fill([])
-      .map(() => [seedSortedPlayers.shift().id, seedSortedPlayers.pop().id])
+      .map(() => [proSortedPlayers.shift().id, proSortedPlayers.pop().id])
       .sort(arrayRandomizer);
   }
 }

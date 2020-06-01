@@ -20,13 +20,22 @@ export const game = {
   findCurrent: sql('game/find-current.sql'),
 };
 
+export const hit = {
+  findRoundHitsByRounds: sql('hit/find-round-hits-by-rounds.sql'),
+  findRoundHitsByTeamIds: sql('hit/find-round-hits-by-team-ids.sql'),
+};
+
 export const match = {
   findActiveByGameId: sql('match/find-active-by-game-id.sql'),
   findByGameId: sql('match/find-by-game-id.sql'),
+  findById: sql('match/find-by-id.sql'),
 };
 
 export const matchTeam = {
   findByGameId: sql('match-team/find-by-game-id.sql'),
+  findById: sql('match-team/find-by-id.sql'),
+  findFirstTeamId: sql('match-team/find-first-team-id.sql'),
+  findNextTeamId: sql('match-team/find-next-team-id.sql'),
 };
 
 export const player = {
@@ -47,7 +56,7 @@ export const team = {
 export const teamPlayer = {
   create: sql('team-player/create.sql'),
   delete: sql('team-player/delete.sql'),
-  findByGameIdWithSeed: sql('team-player/find-by-game-id-with-seed.sql'),
+  findByGameIdWithPro: sql('team-player/find-by-game-id-with-pro.sql'),
   findByGameId: sql('team-player/find-by-game-id.sql'),
 };
 
