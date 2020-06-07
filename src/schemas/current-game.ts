@@ -1,7 +1,7 @@
 import Joi from '@hapi/joi';
 
 export const createTeamPlayerSchema = Joi.object({
-  playerId: Joi.number().required(),
+  uid: Joi.string().required(),
 });
 
 export const createRoundSchema = Joi.array()

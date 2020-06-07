@@ -35,13 +35,19 @@ export class CurrentGameController {
     }
   }
 
-  async createTeamPlayer(ctx: Context, service: GameService, body: CreateTeamPlayer) {
+  async createTeamPlayer(
+    ctx: Context,
+    service: GameService,
+    userId: string,
+    body: CreateTeamPlayer,
+  ) {
     if (service.game.startedAt) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
     try {
-      const players = await db.teamPlayer.create(service.game.id, body.playerId, service.game.bet);
+      const player = await db.player.findIdByUid(userId, body.uid);
+      const players = await db.teamPlayer.create(service.game.id, player.id, service.game.bet);
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {
@@ -56,13 +62,14 @@ export class CurrentGameController {
     }
   }
 
-  async deleteTeamPlayer(ctx: Context, service: GameService, playerId: number) {
+  async deleteTeamPlayer(ctx: Context, service: GameService, uid: string, userId: string) {
     if (service.game.startedAt) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
     try {
-      const players = await db.teamPlayer.delete(service.game.id, playerId, service.game.bet);
+      const player = await db.player.findIdByUid(uid, userId);
+      const players = await db.teamPlayer.delete(service.game.id, player.id, service.game.bet);
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {

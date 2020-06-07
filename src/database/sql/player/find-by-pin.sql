@@ -1,1 +1,1 @@
-SELECT id FROM player WHERE id = ${id} AND user_id = ${userId} AND pin = crypt(${pin}, pin);
+SELECT id FROM player WHERE uid = ${uid} AND user_id = ${userId} AND pin = crypt(${pin}, pin);

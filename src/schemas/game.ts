@@ -15,15 +15,12 @@ export const createGameSchema = Joi.object({
   tournament: Joi.boolean().required(),
   team: Joi.boolean().required(),
   legs: Joi.number()
-    .min(1)
-    .max(3)
+    .allow(1, 3, 5)
     .required(),
   sets: Joi.number()
-    .min(1)
-    .max(3)
+    .allow(1, 3, 5)
     .required(),
   bet: Joi.number()
-    .min(1)
-    .max(500)
+    .allow(10, 20, 50, 100, 200, 500, 1000)
     .required(),
 });

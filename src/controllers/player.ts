@@ -19,10 +19,10 @@ export class PlayerController {
     );
   }
 
-  async findById(ctx: Context, userId: string, playerId: number) {
+  async findById(ctx: Context, userId: string, uid: string) {
     try {
-      const player = await db.player.findById(userId, playerId);
-      const transactions = await db.transaction.findByPlayerId(playerId);
+      const player = await db.player.findByUid(userId, uid);
+      const transactions = await db.transaction.findByPlayerId(player.id);
 
       return response(ctx, httpStatusCodes.OK, { ...player, transactions });
     } catch (err) {
@@ -45,41 +45,43 @@ export class PlayerController {
     return response(ctx, httpStatusCodes.CREATED, player);
   }
 
-  async update(ctx: Context, userId: string, playerId: number, body: UpdatePlayer) {
-    await db.player.update(userId, playerId, body);
+  async update(ctx: Context, userId: string, uid: string, body: UpdatePlayer) {
+    await db.player.update(userId, uid, body);
 
-    const player = await db.player.findById(userId, playerId);
+    const player = await db.player.findByUid(userId, uid);
 
     return response(ctx, httpStatusCodes.OK, player);
   }
 
-  async resetPin(ctx: Context, userId: string, playerId: number) {
+  async resetPin(ctx: Context, userId: string, uid: string) {
     const pin = generatePin();
 
-    await db.player.updatePin(userId, playerId, pin);
+    await db.player.updatePin(userId, uid, pin);
 
-    const player = await db.player.findById(userId, playerId);
+    const player = await db.player.findByUid(userId, uid);
 
     await sendEmail(player.email, generateResetPinEmail(player.name, pin));
 
     return response(ctx, httpStatusCodes.OK);
   }
 
-  async delete(ctx: Context, userId: string, playerId: number) {
-    await db.player.delete(userId, playerId);
+  async delete(ctx: Context, userId: string, uid: string) {
+    await db.player.delete(userId, uid);
 
     return response(ctx, httpStatusCodes.OK);
   }
 
-  async deposit(ctx: Context, playerId: number, body: CreateTransaction) {
-    const transaction = await db.transaction.deposit(playerId, body);
+  async deposit(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
+    const player = await db.player.findIdByUid(userId, uid);
+    const transaction = await db.transaction.deposit(player.id, body);
 
     return response(ctx, httpStatusCodes.OK, transaction);
   }
 
-  async withdrawal(ctx: Context, playerId: number, body: CreateTransaction) {
+  async withdrawal(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
     try {
-      const transaction = await db.transaction.withdrawal(playerId, body);
+      const player = await db.player.findIdByUid(userId, uid);
+      const transaction = await db.transaction.withdrawal(player.id, body);
 
       return response(ctx, httpStatusCodes.OK, transaction);
     } catch (err) {
@@ -93,12 +95,13 @@ export class PlayerController {
 
   async transfer(
     ctx: Context,
-    playerId: number,
-    receiverPlayerId: number,
+    userId: string,
+    uid: string,
+    receiverUid: string,
     body: CreateTransaction,
   ) {
     try {
-      const transaction = await db.transaction.transfer(playerId, receiverPlayerId, body);
+      const transaction = await db.transaction.transfer(userId, uid, receiverUid, body);
 
       return response(ctx, httpStatusCodes.OK, transaction);
     } catch (err) {

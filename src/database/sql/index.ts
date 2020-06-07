@@ -42,7 +42,7 @@ export const player = {
   all: sql('player/all.sql'),
   create: sql('player/create.sql'),
   delete: sql('player/delete.sql'),
-  findById: sql('player/find-by-id.sql'),
+  findByUid: sql('player/find-by-uid.sql'),
   findByPin: sql('player/find-by-pin.sql'),
   updatePin: sql('player/update-pin.sql'),
   update: sql('player/update.sql'),

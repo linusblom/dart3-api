@@ -14,7 +14,7 @@ export const pin = async (ctx: Context, next: Function) => {
 
   try {
     await db.one(sql.findByPin, {
-      id: ctx.params.playerId || ctx.request.body.playerId,
+      uid: ctx.params.uid || ctx.request.body.uid,
       userId: ctx.state.userId,
       pin,
     });

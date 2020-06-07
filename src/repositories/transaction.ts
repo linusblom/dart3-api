@@ -32,23 +32,26 @@ export class TransactionRepository {
     });
   }
 
-  async transfer(playerId: number, receiverPlayerId: number, transaction: CreateTransaction) {
+  async transfer(userId: string, uid: string, receiverUid: string, transaction: CreateTransaction) {
     return this.db.tx(async tx => {
-      const player = await tx.one('SELECT name, user_id FROM player WHERE id = $1', [playerId]);
+      const player = await tx.one('SELECT id, name FROM player WHERE user_id = $1 AND uid = $2', [
+        userId,
+        uid,
+      ]);
       const receiverPlayer = await tx.one(
-        'SELECT name FROM player WHERE id = $1 AND user_id = $2',
-        [receiverPlayerId, player.userId],
+        'SELECT id, name FROM player WHERE user_id = $1 AND uid = $2',
+        [userId, receiverUid],
       );
 
       const debit: Transaction = await tx.one(sql.debit, {
-        playerId,
+        playerId: player.id,
         description: `To ${receiverPlayer.name}`,
         type: TransactionType.Transfer,
         ...transaction,
       });
 
       await tx.one(sql.credit, {
-        playerId: receiverPlayerId,
+        playerId: receiverPlayer.id,
         description: `From ${player.name}`,
         type: TransactionType.Transfer,
         ...transaction,

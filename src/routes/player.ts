@@ -15,43 +15,48 @@ router
     validate(createPlayerSchema),
     async (ctx: Context) => await ctrl.create(ctx, ctx.state.userId, ctx.request.body),
   )
-  .get(
-    '/:playerId',
-    async (ctx: Context) => await ctrl.findById(ctx, ctx.state.userId, ctx.params.playerId),
-  )
+  .get('/:uid', async (ctx: Context) => await ctrl.findById(ctx, ctx.state.userId, ctx.params.uid))
   .put(
-    '/:playerId',
+    '/:uid',
     validate(updatePlayerSchema),
     async (ctx: Context) =>
-      await ctrl.update(ctx, ctx.state.userId, ctx.params.playerId, ctx.request.body),
+      await ctrl.update(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
   )
   .patch(
-    '/:playerId/reset-pin',
-    async (ctx: Context) => await ctrl.resetPin(ctx, ctx.state.userId, ctx.params.playerId),
+    '/:uid/reset-pin',
+    async (ctx: Context) => await ctrl.resetPin(ctx, ctx.state.userId, ctx.params.uid),
   )
   .delete(
-    '/:playerId',
+    '/:uid',
     pin,
-    async (ctx: Context) => await ctrl.delete(ctx, ctx.state.userId, ctx.params.playerId),
+    async (ctx: Context) => await ctrl.delete(ctx, ctx.state.userId, ctx.params.uid),
   )
   .post(
-    '/:playerId/deposit',
-    pin,
-    validate(transactionSchema),
-    async (ctx: Context) => await ctrl.deposit(ctx, ctx.params.playerId, ctx.request.body),
-  )
-  .post(
-    '/:playerId/withdrawal',
-    pin,
-    validate(transactionSchema),
-    async (ctx: Context) => await ctrl.withdrawal(ctx, ctx.params.playerId, ctx.request.body),
-  )
-  .post(
-    '/:playerId/transfer/:receiverPlayerId',
+    '/:uid/deposit',
     pin,
     validate(transactionSchema),
     async (ctx: Context) =>
-      await ctrl.transfer(ctx, ctx.params.playerId, ctx.params.receiverPlayerId, ctx.request.body),
+      await ctrl.deposit(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
+  )
+  .post(
+    '/:uid/withdrawal',
+    pin,
+    validate(transactionSchema),
+    async (ctx: Context) =>
+      await ctrl.withdrawal(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
+  )
+  .post(
+    '/:uid/transfer/:receiverUid',
+    pin,
+    validate(transactionSchema),
+    async (ctx: Context) =>
+      await ctrl.transfer(
+        ctx,
+        ctx.state.userId,
+        ctx.params.uid,
+        ctx.params.receiverUid,
+        ctx.request.body,
+      ),
   );
 
 export default router;

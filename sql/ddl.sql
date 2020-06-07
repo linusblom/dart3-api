@@ -3,6 +3,7 @@ CREATE EXTENSION pgcrypto;
 CREATE TABLE IF NOT EXISTS player (
   id                    SERIAL,
   user_id               CHAR(30)      NOT NULL,
+  uid                   CHAR(20)      NOT NULL,
   name                  VARCHAR(64)   NOT NULL,
   email                 VARCHAR       NOT NULL,
   balance               NUMERIC(10,2) DEFAULT 0,
@@ -52,6 +53,7 @@ CREATE TYPE game_type AS ENUM (
 CREATE TABLE IF NOT EXISTS game (
   id                SERIAL,
   user_id           CHAR(30)      NOT NULL,
+  uid               CHAR(20)      NOT NULL,
   type              game_type     NOT NULL,
   tournament        BOOLEAN       NOT NULL,
   team              BOOLEAN       NOT NULL,
@@ -104,8 +106,7 @@ CREATE TABLE IF NOT EXISTS match (
   started_at            TIMESTAMP,
   ended_at              TIMESTAMP,
   PRIMARY KEY (id),
-  FOREIGN KEY (game_id) REFERENCES game (id),
-  FOREIGN KEY (active_player_id) REFERENCES player (id)
+  FOREIGN KEY (game_id) REFERENCES game (id)
 );
 
 CREATE TABLE IF NOT EXISTS match_team (
