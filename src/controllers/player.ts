@@ -12,11 +12,7 @@ export class PlayerController {
   async all(ctx: Context, userId: string) {
     const players = await db.player.all(userId);
 
-    return response(
-      ctx,
-      httpStatusCodes.OK,
-      players.map(player => ({ ...player, transactions: [] })),
-    );
+    return response(ctx, httpStatusCodes.OK, players);
   }
 
   async findById(ctx: Context, userId: string, uid: string) {
@@ -26,6 +22,7 @@ export class PlayerController {
 
       return response(ctx, httpStatusCodes.OK, { ...player, transactions });
     } catch (err) {
+      console.log(err);
       return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
     }
   }
@@ -42,7 +39,7 @@ export class PlayerController {
       await sendEmail(body.email, generateWelcomeEmail(body.name, pin));
     }
 
-    return response(ctx, httpStatusCodes.CREATED, player);
+    return response(ctx, httpStatusCodes.CREATED, { ...player, transactions: [] });
   }
 
   async update(ctx: Context, userId: string, uid: string, body: UpdatePlayer) {

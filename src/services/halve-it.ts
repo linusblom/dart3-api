@@ -1,5 +1,4 @@
-import { Score, ScoreApproved, MatchActive } from 'dart3-sdk';
-import { matchTeam as sql } from '../database/sql';
+import { Score, ScoreApproved } from 'dart3-sdk';
 
 import { GameService } from './game';
 
@@ -69,29 +68,6 @@ export class HalveItService extends GameService {
       scores: approvedScores,
       nextScore,
       xp: this.getRoundTotal(scores),
-    };
-  }
-
-  getNextRoundTx(active: MatchActive) {
-    return async (tx: any) => {
-      const next = await tx.oneOrNone(sql.findNextTeamId, {
-        matchTeamId: active.matchTeamId,
-        matchId: active.id,
-      });
-
-      if (next) {
-        await tx.none('UPDATE match SET active_match_team_id = $1 WHERE id = $2', [
-          next.id,
-          active.id,
-        ]);
-      } else {
-        const first = await tx.oneOrNone(sql.findFirstTeamId, { matchId: active.id });
-
-        await tx.none(
-          'UPDATE match SET active_match_team_id = $1, active_round = active_round + 1 WHERE id = $2',
-          [first.id, active.id],
-        );
-      }
     };
   }
 }

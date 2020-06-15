@@ -2,7 +2,7 @@ import { Context } from 'koa';
 import { CreateTeamPlayer, Score } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { response, errorResponse } from '../utils';
+import { response, errorResponse, playerRandomizer } from '../utils';
 import { GameService } from '../services';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
@@ -68,7 +68,7 @@ export class CurrentGameController {
     }
 
     try {
-      const player = await db.player.findIdByUid(uid, userId);
+      const player = await db.player.findIdByUid(userId, uid);
       const players = await db.teamPlayer.delete(service.game.id, player.id, service.game.bet);
 
       return response(ctx, httpStatusCodes.CREATED, { players });
@@ -84,11 +84,18 @@ export class CurrentGameController {
 
     const players = await db.teamPlayer.findByGameIdWithPro(service.game.id);
 
+    if (
+      (service.game.team || service.game.tournament) &&
+      (players.length % 2 !== 0 || players.length < 4)
+    ) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
+
     await db.game.start(
       service.game.id,
-      service.getTeamPlayerIds(ctx, players),
       service.game.tournament,
       service.getStartScore(),
+      playerRandomizer(players, service.game.team),
     );
 
     return response(ctx, httpStatusCodes.OK);
@@ -107,20 +114,8 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    const active = await db.match.findActiveByGameId(service.game.id);
-    const roundScore = service.getRoundScore(body, active.round, active.currentScore);
-    await db.hit.createRound(active, roundScore);
-    await db.match.executeNextRoundTx(service.getNextRoundTx(active));
+    const roundResponse = await service.createRound(body);
 
-    const match = await db.match.findById(active.id);
-    const team = await db.matchTeam.findById(active.matchTeamId);
-    const hits = await db.hit.findRoundHitsByRounds(
-      match.id,
-      match.activeSet,
-      match.activeLeg,
-      match.activeRound,
-    );
-
-    return response(ctx, httpStatusCodes.OK, { match, team, hits });
+    return response(ctx, httpStatusCodes.OK, roundResponse);
   }
 }

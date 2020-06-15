@@ -1,6 +1,3 @@
-import { ITask } from 'pg-promise';
-import { any } from 'bluebird';
-
 export type Param = string | number | boolean;
 
 export interface SQLError {

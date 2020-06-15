@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS game (
   legs              SMALLINT      NOT NULL,
   sets              SMALLINT      NOT NULL,
   bet               SMALLINT      NOT NULL,
+  prize_pool        NUMERIC(10,2) DEFAULT 0,
   created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at        TIMESTAMP,
   ended_at          TIMESTAMP,
@@ -169,8 +170,7 @@ LEFT JOIN team_player tp ON tp.team_id = mt.team_id AND tp.player_id = (
   LIMIT 1
 );
 
-CREATE OR REPLACE FUNCTION update_player_balance()
-  RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION update_player_balance() RETURNS TRIGGER AS $$
 BEGIN
   UPDATE player SET balance = NEW.balance WHERE id = NEW.player_id;
   RETURN NEW;
@@ -178,11 +178,26 @@ END; $$ language plpgsql;
 
 CREATE TRIGGER new_transaction AFTER INSERT ON transaction FOR EACH ROW EXECUTE PROCEDURE update_player_balance();
 
-CREATE OR REPLACE FUNCTION init_player_balace()
-  RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION init_player_balace() RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO transaction (player_id, type, balance) VALUES (NEW.id, 'system', 0);
   RETURN NEW;
 END; $$ language plpgsql;
 
 CREATE TRIGGER new_player AFTER INSERT ON player FOR EACH ROW EXECUTE PROCEDURE init_player_balace();
+
+CREATE OR REPLACE FUNCTION credit_prize_pool() RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE game SET prize_pool = prize_pool + bet WHERE id = NEW.game_id;
+  RETURN NEW;
+END; $$ language plpgsql;
+
+CREATE TRIGGER join_game AFTER INSERT ON team_player FOR EACH ROW EXECUTE PROCEDURE credit_prize_pool();
+
+CREATE OR REPLACE FUNCTION debit_prize_pool() RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE game SET prize_pool = prize_pool - bet WHERE id = OLD.game_id;
+  RETURN OLD;
+END; $$ language plpgsql;
+
+CREATE TRIGGER leave_game AFTER DELETE ON team_player FOR EACH ROW EXECUTE PROCEDURE debit_prize_pool();

@@ -3,7 +3,7 @@ import { Context } from 'koa';
 import { Game, GameType } from 'dart3-sdk';
 
 import { errorResponse } from '../utils';
-import { db } from '../database';
+import { db, pgp } from '../database';
 import { GameService, X01Service, LegsService, HalveItService } from '../services';
 import { game as sql } from '../database/sql';
 
@@ -13,11 +13,11 @@ const getGameService = (game: Game): GameService => {
     case GameType.Five01SingleInDoubleOut:
     case GameType.Three01SDoubleInDoubleOut:
     case GameType.Three01SingleInDoubleOut:
-      return new X01Service(game);
+      return new X01Service(game, db, pgp);
     case GameType.Legs:
-      return new LegsService(game);
+      return new LegsService(game, db, pgp);
     case GameType.HalveIt:
-      return new HalveItService(game);
+      return new HalveItService(game, db, pgp);
   }
 };
 

@@ -21,7 +21,7 @@ export const game = {
 };
 
 export const hit = {
-  findRoundHitsByRounds: sql('hit/find-round-hits-by-rounds.sql'),
+  findRoundHitsByRoundAndTeamId: sql('hit/find-round-hits-by-round-and-team-id.sql'),
   findRoundHitsByTeamIds: sql('hit/find-round-hits-by-team-ids.sql'),
 };
 
@@ -34,6 +34,7 @@ export const match = {
 export const matchTeam = {
   findByGameId: sql('match-team/find-by-game-id.sql'),
   findById: sql('match-team/find-by-id.sql'),
+  findByMatchId: sql('match-team/find-by-match-id.sql'),
   findFirstTeamId: sql('match-team/find-first-team-id.sql'),
   findNextTeamId: sql('match-team/find-next-team-id.sql'),
 };
