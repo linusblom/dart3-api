@@ -17,8 +17,11 @@ export class PlayerController {
 
   async findById(ctx: Context, userId: string, uid: string) {
     try {
-      const player = await db.player.findByUid(userId, uid);
-      const transactions = await db.transaction.findByPlayerId(player.id);
+      let player, transactions;
+      await db.task(async t => {
+          player = await t.player.findByUid(userId, uid);
+          transactions = await t.transaction.findByPlayerId(player.id);
+      });
 
       return response(ctx, httpStatusCodes.OK, { ...player, transactions });
     } catch (err) {
