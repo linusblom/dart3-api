@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS match_team (
   sets      SMALLINT  DEFAULT 0,
   legs      SMALLINT  DEFAULT 0,
   score     SMALLINT  DEFAULT 0,
-  position  SMALLINT  DEFAULT 0,
+  active    BOOLEAN   DEFAULT true,
   gems      SMALLINT  DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (match_id) REFERENCES match (id),

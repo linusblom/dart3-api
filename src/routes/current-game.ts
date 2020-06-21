@@ -24,7 +24,7 @@ router
       await ctrl.deleteTeamPlayer(ctx, ctx.state.service, ctx.params.uid, ctx.state.userId),
   )
   .patch('/start', async (ctx: Context) => await ctrl.start(ctx, ctx.state.service))
-  .get('/match', async (ctx: Context) => await ctrl.allMatches(ctx, ctx.state.service))
+  .get('/match', async (ctx: Context) => await ctrl.getMatches(ctx, ctx.state.service))
   .post(
     '/round',
     validate(createRoundSchema),

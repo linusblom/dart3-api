@@ -1,5 +1,5 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { TeamPlayer, TransactionType } from 'dart3-sdk';
+import { TeamPlayer, TransactionType, GameType, gameName } from 'dart3-sdk';
 
 import { teamPlayer as sql, transaction as transactionSql } from '../database/sql';
 
@@ -10,13 +10,13 @@ export class TeamPlayerRepository {
     return this.db.any<TeamPlayer>(sql.findByGameId, { gameId });
   }
 
-  async create(gameId: number, playerId: number, bet: number) {
+  async create(gameId: number, playerId: number, bet: number, type: GameType) {
     return this.db.tx(async tx => {
       await tx.none(sql.create, { gameId, playerId });
 
       await tx.one(transactionSql.debit, {
         playerId,
-        description: `Game ${gameId}`,
+        description: `${gameName(type)} (#${gameId})`,
         type: TransactionType.Bet,
         amount: bet,
       });
@@ -26,13 +26,13 @@ export class TeamPlayerRepository {
     });
   }
 
-  async delete(gameId: number, playerId: number, bet: number) {
+  async delete(gameId: number, playerId: number, bet: number, type: GameType) {
     return this.db.tx(async tx => {
       await tx.one(sql.delete, { gameId, playerId });
 
       await tx.one(transactionSql.credit, {
         playerId,
-        description: `Game ${gameId}`,
+        description: `${gameName(type)} (#${gameId})`,
         type: TransactionType.Refund,
         amount: bet,
       });

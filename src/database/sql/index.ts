@@ -34,6 +34,7 @@ export const match = {
 export const matchTeam = {
   findByGameId: sql('match-team/find-by-game-id.sql'),
   findById: sql('match-team/find-by-id.sql'),
+  findByMatchIdOrderBySet: sql('match-team/find-by-match-id-order-by-set.sql'),
   findByMatchId: sql('match-team/find-by-match-id.sql'),
   findFirstTeamId: sql('match-team/find-first-team-id.sql'),
   findNextTeamId: sql('match-team/find-next-team-id.sql'),

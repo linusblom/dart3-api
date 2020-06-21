@@ -47,7 +47,12 @@ export class CurrentGameController {
 
     try {
       const player = await db.player.findIdByUid(userId, body.uid);
-      const players = await db.teamPlayer.create(service.game.id, player.id, service.game.bet);
+      const players = await db.teamPlayer.create(
+        service.game.id,
+        player.id,
+        service.game.bet,
+        service.game.type,
+      );
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {
@@ -69,7 +74,12 @@ export class CurrentGameController {
 
     try {
       const player = await db.player.findIdByUid(userId, uid);
-      const players = await db.teamPlayer.delete(service.game.id, player.id, service.game.bet);
+      const players = await db.teamPlayer.delete(
+        service.game.id,
+        player.id,
+        service.game.bet,
+        service.game.type,
+      );
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {
@@ -101,7 +111,7 @@ export class CurrentGameController {
     return response(ctx, httpStatusCodes.OK);
   }
 
-  async allMatches(ctx: Context, service: GameService) {
+  async getMatches(ctx: Context, service: GameService) {
     const matches = await db.match.findByGameId(service.game.id);
     const teams = await db.matchTeam.findByGameId(service.game.id);
     const hits = await db.hit.findRoundHitsByTeamIds(teams.map(({ id }) => id));
