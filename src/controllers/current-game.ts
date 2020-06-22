@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { CreateTeamPlayer, Score } from 'dart3-sdk';
+import { CreateTeamPlayer, Score, TeamPlayer, Match, MatchTeam, RoundHit } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { response, errorResponse, playerRandomizer } from '../utils';
@@ -45,14 +45,15 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
+    let players: TeamPlayer[];
+
     try {
-      const player = await db.player.findIdByUid(userId, body.uid);
-      const players = await db.teamPlayer.create(
-        service.game.id,
-        player.id,
-        service.game.bet,
-        service.game.type,
-      );
+      await db.task(async t => {
+        const player = await t.player.findIdByUid(userId, body.uid);
+        const { id, bet, type } = service.game;
+
+        players = await t.teamPlayer.create(id, player.id, bet, type);
+      });
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {
@@ -72,14 +73,15 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
+    let players: TeamPlayer[];
+
     try {
-      const player = await db.player.findIdByUid(userId, uid);
-      const players = await db.teamPlayer.delete(
-        service.game.id,
-        player.id,
-        service.game.bet,
-        service.game.type,
-      );
+      await db.task(async t => {
+        const player = await t.player.findIdByUid(userId, uid);
+        const { id, bet, type } = service.game;
+
+        players = await t.teamPlayer.delete(id, player.id, bet, type);
+      });
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {
@@ -92,29 +94,28 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    const players = await db.teamPlayer.findByGameIdWithPro(service.game.id);
+    await db.task(async t => {
+      const { id, team, tournament } = service.game;
+      const players = await t.teamPlayer.findByGameIdWithPro(id);
 
-    if (
-      (service.game.team || service.game.tournament) &&
-      (players.length % 2 !== 0 || players.length < 4)
-    ) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
+      if ((team || tournament) && (players.length % 2 !== 0 || players.length < 4)) {
+        return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+      }
 
-    await db.game.start(
-      service.game.id,
-      service.game.tournament,
-      service.getStartScore(),
-      playerRandomizer(players, service.game.team),
-    );
+      await t.game.start(id, tournament, service.getStartScore(), playerRandomizer(players, team));
+    });
 
     return response(ctx, httpStatusCodes.OK);
   }
 
   async getMatches(ctx: Context, service: GameService) {
-    const matches = await db.match.findByGameId(service.game.id);
-    const teams = await db.matchTeam.findByGameId(service.game.id);
-    const hits = await db.hit.findRoundHitsByTeamIds(teams.map(({ id }) => id));
+    let matches: Match[], teams: MatchTeam[], hits: RoundHit[];
+
+    await db.task(async t => {
+      matches = await t.match.findByGameId(service.game.id);
+      teams = await t.matchTeam.findByGameId(service.game.id);
+      hits = await t.hit.findRoundHitsByTeamIds(teams.map(({ id }) => id));
+    });
 
     return response(ctx, httpStatusCodes.OK, { matches, teams, hits });
   }

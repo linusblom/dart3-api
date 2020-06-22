@@ -1,6 +1,13 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import { CreatePlayer, UpdatePlayer, CreateTransaction } from 'dart3-sdk';
+import {
+  CreatePlayer,
+  UpdatePlayer,
+  CreateTransaction,
+  Player,
+  Transaction,
+  DbId,
+} from 'dart3-sdk';
 import md5 from 'md5';
 
 import { randomColor, generatePin, response, errorResponse } from '../utils';
@@ -17,15 +24,15 @@ export class PlayerController {
 
   async findById(ctx: Context, userId: string, uid: string) {
     try {
-      let player, transactions;
+      let player: Player, transactions: Transaction[];
+
       await db.task(async t => {
-          player = await t.player.findByUid(userId, uid);
-          transactions = await t.transaction.findByPlayerId(player.id);
+        player = await t.player.findByUid(userId, uid);
+        transactions = await t.transaction.findByPlayerId(player.id);
       });
 
       return response(ctx, httpStatusCodes.OK, { ...player, transactions });
     } catch (err) {
-      console.log(err);
       return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
     }
   }
@@ -46,19 +53,25 @@ export class PlayerController {
   }
 
   async update(ctx: Context, userId: string, uid: string, body: UpdatePlayer) {
-    await db.player.update(userId, uid, body);
+    let player: Player;
 
-    const player = await db.player.findByUid(userId, uid);
+    await db.task(async t => {
+      await t.player.update(userId, uid, body);
+      player = await t.player.findByUid(userId, uid);
+    });
 
     return response(ctx, httpStatusCodes.OK, player);
   }
 
   async resetPin(ctx: Context, userId: string, uid: string) {
+    let player: Player;
+
     const pin = generatePin();
 
-    await db.player.updatePin(userId, uid, pin);
-
-    const player = await db.player.findByUid(userId, uid);
+    await db.task(async t => {
+      await t.player.updatePin(userId, uid, pin);
+      player = await t.player.findByUid(userId, uid);
+    });
 
     await sendEmail(player.email, generateResetPinEmail(player.name, pin));
 
@@ -72,16 +85,24 @@ export class PlayerController {
   }
 
   async deposit(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
-    const player = await db.player.findIdByUid(userId, uid);
-    const transaction = await db.transaction.deposit(player.id, body);
+    let player: DbId, transaction: Transaction;
+
+    await db.task(async t => {
+      player = await t.player.findIdByUid(userId, uid);
+      transaction = await t.transaction.deposit(player.id, body);
+    });
 
     return response(ctx, httpStatusCodes.OK, transaction);
   }
 
   async withdrawal(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
     try {
-      const player = await db.player.findIdByUid(userId, uid);
-      const transaction = await db.transaction.withdrawal(player.id, body);
+      let player: DbId, transaction: Transaction;
+
+      await db.task(async t => {
+        player = await t.player.findIdByUid(userId, uid);
+        transaction = await t.transaction.withdrawal(player.id, body);
+      });
 
       return response(ctx, httpStatusCodes.OK, transaction);
     } catch (err) {
