@@ -6,6 +6,7 @@ import { TeamRepository } from './team';
 import { TeamPlayerRepository } from './team-player';
 import { MatchRepository } from './match';
 import { MatchTeamRepository } from './match-team';
+import { JackpotRepository } from './jackpot';
 
 interface Extensions {
   player: PlayerRepository;
@@ -16,6 +17,7 @@ interface Extensions {
   teamPlayer: TeamPlayerRepository;
   match: MatchRepository;
   matchTeam: MatchTeamRepository;
+  jackpot: JackpotRepository;
 }
 
 export {
@@ -28,4 +30,5 @@ export {
   TeamPlayerRepository,
   MatchRepository,
   MatchTeamRepository,
+  JackpotRepository,
 };
