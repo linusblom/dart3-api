@@ -78,9 +78,10 @@ CREATE TABLE IF NOT EXISTS team (
 CREATE TABLE IF NOT EXISTS team_player (
   id            SERIAL,
   team_id       INTEGER,
-  player_id     INTEGER   NOT NULL,
-  game_id       INTEGER   NOT NULL,
-  xp            SMALLINT  DEFAULT 0,
+  player_id     INTEGER       NOT NULL,
+  game_id       INTEGER       NOT NULL,
+  xp            SMALLINT      DEFAULT 0,
+  win           NUMERIC(10,2) DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (team_id) REFERENCES team (id),
   FOREIGN KEY (player_id) REFERENCES player (id),

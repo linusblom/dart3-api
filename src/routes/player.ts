@@ -9,13 +9,13 @@ const router = new Router();
 const ctrl = new PlayerController();
 
 router
-  .get('/', async (ctx: Context) => await ctrl.all(ctx, ctx.state.userId))
+  .get('/', async (ctx: Context) => await ctrl.get(ctx, ctx.state.userId))
   .post(
     '/',
     validate(createPlayerSchema),
     async (ctx: Context) => await ctrl.create(ctx, ctx.state.userId, ctx.request.body),
   )
-  .get('/:uid', async (ctx: Context) => await ctrl.findById(ctx, ctx.state.userId, ctx.params.uid))
+  .get('/:uid', async (ctx: Context) => await ctrl.getByUid(ctx, ctx.state.userId, ctx.params.uid))
   .put(
     '/:uid',
     validate(updatePlayerSchema),

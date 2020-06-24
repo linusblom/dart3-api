@@ -16,13 +16,13 @@ import { db } from '../database';
 import { SQLErrorCode } from '../models';
 
 export class PlayerController {
-  async all(ctx: Context, userId: string) {
+  async get(ctx: Context, userId: string) {
     const players = await db.player.all(userId);
 
     return response(ctx, httpStatusCodes.OK, players);
   }
 
-  async findById(ctx: Context, userId: string, uid: string) {
+  async getByUid(ctx: Context, userId: string, uid: string) {
     try {
       let player: Player, transactions: Transaction[];
 

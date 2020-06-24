@@ -21,4 +21,8 @@ export class GameController {
 
     return response(ctx, httpStatusCodes.CREATED, { ...game, pendingPlayers: [] });
   }
+
+  async getByUid(ctx: Context, uid: string) {
+    return response(ctx, httpStatusCodes.OK, uid);
+  }
 }

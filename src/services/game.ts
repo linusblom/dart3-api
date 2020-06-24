@@ -94,7 +94,7 @@ export abstract class GameService {
       active.id,
     ]);
 
-    return this.nextRoundResponse(active, tx);
+    return this.roundResponse(active, tx);
   }
 
   async nextRound(active: MatchActive, tx) {
@@ -105,10 +105,10 @@ export abstract class GameService {
       [first.id, active.id],
     );
 
-    return this.nextRoundResponse(active, tx);
+    return this.roundResponse(active, tx);
   }
 
-  protected async nextRoundResponse(active: MatchActive, tx, game?: Game) {
+  protected async roundResponse(active: MatchActive, tx, game?: Game) {
     const match = await tx.one(
       `
       SELECT id, active_round, active_set, active_leg, active_match_team_id, active_player_id, status, ended_at
@@ -185,7 +185,7 @@ export abstract class GameService {
       [first.id, leg, set, active.id],
     );
 
-    return this.nextRoundResponse(active, tx);
+    return this.roundResponse(active, tx);
   }
 
   protected async endMatch(active: MatchActive, tx) {
@@ -205,16 +205,36 @@ export abstract class GameService {
       teams
         .filter((team, _, array) => team.sets === array[0].sets)
         .reduce((acc, { playerIds }) => [...acc, ...playerIds], [])
-        .map(async (playerId, _, array) =>
-          tx.one(tSql.credit, {
+        .map(async (playerId, _, array) => {
+          const win = game.prizePool / array.length;
+
+          await tx.one(tSql.credit, {
             playerId,
-            description: `${gameName(this.game.type)} (#${this.game.id})`,
+            description: `Congratulation (#${this.game.id})`,
             type: TransactionType.Win,
-            amount: game.prizePool / array.length,
-          }),
+            amount: win,
+          });
+
+          await tx.none(
+            'UPDATE team_player SET win = $1, xp = xp + $2 WHERE player_id = $3 AND game_id = $4',
+            [win, 100 * this.game.bet, playerId, this.game.id],
+          );
+
+          return Promise.resolve();
+        }),
+    );
+
+    await Promise.all(
+      teams
+        .reduce((acc, { playerIds }) => [...acc, ...playerIds], [])
+        .map(async playerId =>
+          tx.none(
+            'UPDATE player p SET xp = p.xp + tp.xp FROM team_player tp WHERE tp.player_id = p.id AND p.id = $1 AND tp.game_id = $2',
+            [playerId, this.game.id],
+          ),
         ),
     );
 
-    return this.nextRoundResponse(active, tx, game);
+    return this.roundResponse(active, tx, game);
   }
 }
