@@ -1,0 +1,24 @@
+{
+  "family": "dart3-api",
+  "executionRoleArn": "arn:aws:iam::498084140461:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+      {
+          "name": "dart3-api",
+          "image": "498084140461.dkr.ecr.eu-north-1.amazonaws.com/dart3-api:latest",
+          "portMappings": [
+              {
+                  "containerPort": 8080,
+                  "hostPort": 8080,
+                  "protocol": "tcp"
+              }
+          ],
+          "essential": true
+      }
+  ],
+  "requiresCompatibilities": [
+      "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512"
+}

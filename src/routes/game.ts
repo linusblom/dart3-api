@@ -1,0 +1,21 @@
+import { Context } from 'koa';
+import Router from 'koa-router';
+
+import { validate, gameService } from '../middlewares';
+import { createGameSchema } from '../schemas';
+import { GameController } from '../controllers';
+import current from './current-game';
+
+const router = new Router();
+const ctrl = new GameController();
+
+router
+  .use('/current', gameService, current.routes(), current.allowedMethods())
+  .post(
+    '/',
+    validate(createGameSchema),
+    async (ctx: Context) => await ctrl.create(ctx, ctx.state.userId, ctx.request.body),
+  )
+  .get('/:uid', async (ctx: Context) => await ctrl.getByUid(ctx, ctx.params.uid));
+
+export default router;

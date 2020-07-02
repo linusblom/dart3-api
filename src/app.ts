@@ -1,15 +1,25 @@
-import express from 'express';
+import Koa from 'koa';
+import cors from '@koa/cors';
+import dotenv from 'dotenv';
+import bodyParser from 'koa-bodyparser';
+import pino from 'pino';
 
-const app = express();
-const port = 8080;
+dotenv.config();
 
-app.get('/', (req, res) => {
-  res.send('The sedulous hyena ate the antelope!');
-});
+import { router } from './routes';
+import { error, authorize, logger } from './middlewares';
 
-app.listen(port, err => {
-  if (err) {
-    return console.error(err);
-  }
-  return console.log(`server is listening on ${port}`);
-});
+const { PORT } = process.env;
+const app = new Koa();
+
+app
+  .use(cors({ origin: '*', credentials: true }))
+  .use(logger)
+  .use(error)
+  .use(authorize)
+  .use(bodyParser())
+  .use(router.routes())
+
+  .use(router.allowedMethods());
+
+app.listen(PORT, () => pino().info(`Dart3 server is listening on ${PORT}`));
