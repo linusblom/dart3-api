@@ -1,11 +1,11 @@
 import AWS from 'aws-sdk';
 
-const { AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION } = process.env;
+const { AWS_ACCESS_KEY, AWS_SECRET_KEY } = process.env;
 
 AWS.config.update({
   accessKeyId: AWS_ACCESS_KEY,
   secretAccessKey: AWS_SECRET_KEY,
-  region: AWS_REGION,
+  region: 'eu-west-1',
 });
 
 const ses = new AWS.SES({ apiVersion: '2010-12-01' });
@@ -34,8 +34,8 @@ export const sendEmail = async (
         Data: message.subject,
       },
     },
-    ReturnPath: 'dart3@linusblom.io',
-    Source: 'dart3@linusblom.io',
+    ReturnPath: 'noreply@dart3.app',
+    Source: 'noreply@dart3.app',
   };
 
   return await ses.sendEmail(params).promise();

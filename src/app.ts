@@ -2,17 +2,18 @@ import Koa from 'koa';
 import cors from '@koa/cors';
 import dotenv from 'dotenv';
 import bodyParser from 'koa-bodyparser';
+import pino from 'pino';
 
 dotenv.config();
 
 import { router } from './routes';
 import { error, authorize, logger } from './middlewares';
 
-const { PORT, ORIGIN } = process.env;
+const { PORT } = process.env;
 const app = new Koa();
 
 app
-  .use(cors({ origin: ORIGIN, credentials: true }))
+  .use(cors({ origin: '*', credentials: true }))
   .use(logger)
   .use(error)
   .use(authorize)
@@ -21,4 +22,4 @@ app
 
   .use(router.allowedMethods());
 
-app.listen(PORT, () => console.log(`Dart3 server is listening on ${PORT}`));
+app.listen(PORT, () => pino().info(`Dart3 server is listening on ${PORT}`));
