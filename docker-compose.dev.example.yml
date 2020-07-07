@@ -4,7 +4,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: ./docker/dev.dockerfile
+      dockerfile: ./Dockerfile
     environment:
       - PORT=8080
       - ENV=development
@@ -29,6 +29,7 @@ services:
       - ./nodemon.json:/app/nodemon.json
     depends_on:
       - database
+    command: yarn dev
   database:
     image: postgres:11.8
     environment:
