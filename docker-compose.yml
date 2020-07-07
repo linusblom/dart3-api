@@ -24,5 +24,4 @@ services:
       - $PORT:$PORT
     volumes:
       - .:/app
-    command: node dist/app.js
  
