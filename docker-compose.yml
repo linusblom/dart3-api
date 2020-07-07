@@ -4,7 +4,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: ./docker/ecr.dockerfile
+      dockerfile: docker/ecr.dockerfile
     environment:
       - PORT=$PORT
       - ENV=$ENV
@@ -24,4 +24,5 @@ services:
       - $PORT:$PORT
     volumes:
       - .:/app
+    command: node dist/app.js
  

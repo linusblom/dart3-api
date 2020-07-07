@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "main": "dist/app.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "start": "nodemon src/app.ts"
   },
   "author": "Linus Blom",
   "private": true,
