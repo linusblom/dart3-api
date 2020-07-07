@@ -48,13 +48,22 @@ jobs:
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
   
     - name: Download task definition
+      id: download-task-def
       run: |
         aws ecs describe-task-definition --task-definition dart3-api --query taskDefinition > task-definition.json
+    
+    - name: Render task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        container-name: dart3-api
+        image: ${{ steps.build-image.outputs.image }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
-        task-definition: task-definition.json
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: dart3-service
         cluster: dart3-cluster
         wait-for-service-stability: true
