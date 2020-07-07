@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "nodemon src/app.ts",
-    "start": "node src/app.ts"
+    "start": "node dist/index.js"
   },
   "author": "Linus Blom",
   "private": true,
