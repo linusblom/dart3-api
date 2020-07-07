@@ -20,6 +20,10 @@ services:
     build:
       context: .
       dockerfile: ./docker/ecr.dockerfile
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
     image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
     expose:
       - 8080
