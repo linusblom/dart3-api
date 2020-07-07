@@ -38,7 +38,7 @@ export class PlayerController {
   }
 
   async create(ctx: Context, userId: string, body: CreatePlayer) {
-    const dev = process.env.NODE_ENV === 'development';
+    const dev = process.env.ENV === 'development';
     const color = randomColor();
     const avatar = `https://s.gravatar.com/avatar/${md5(body.email)}?d=identicon`;
     const pin = dev ? '1111' : generatePin();

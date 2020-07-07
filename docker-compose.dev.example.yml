@@ -1,0 +1,46 @@
+version: '3.7'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DATABASE_URL=postgres://dart3:dart3@database:5432/dart3
+      - AWS_ACCESS_KEY=
+      - AWS_SECRET_KEY=
+      - AWS_REGION=
+      - AUTH0_CLIENT_ID=
+      - AUTH0_CLIENT_SECRET=
+      - AUTH0_API_AUDIENCE=
+      - AUTH0_API_URL=
+      - AUTH0_OAUTH_URL=
+    image: dart3-api
+    user: node
+    expose:
+      - 8080
+    ports:
+      - 8080:8080
+      - 9229:9229
+    volumes:
+      - .:/app
+      - ./nodemon.json:/app/nodemon.json
+    depends_on:
+      - database
+    command: yarn dev
+  database:
+    image: postgres:11.8
+    environment:
+      POSTGRES_DB: dart3
+      POSTGRES_USER: dart3
+      POSTGRES_PASSWORD: dart3
+    volumes:
+      - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d/
+      - dart3_dbdata:/var/lib/postgresql/data/
+    ports:
+      - 5432:5432
+
+volumes:
+  dart3_dbdata:
