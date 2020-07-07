@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: docker/ecr.dockerfile
-    environment:
+    args:
       - PORT=$PORT
       - ENV=$ENV
       - DATABASE_URL=$DATABASE_URL
