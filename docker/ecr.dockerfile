@@ -8,3 +8,5 @@ COPY . /app
 RUN yarn build
 RUN yarn install --prod
 COPY ./src/database/sql /app/dist/database/sql
+
+CMD ["node", "dist/app.js"]
