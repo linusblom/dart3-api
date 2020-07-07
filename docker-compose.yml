@@ -3,8 +3,8 @@ version: '3.7'
 services:
   api:
     environment:
-      - PORT=8080
-      - ENV=production
+      - PORT=${PORT}
+      - ENV=${ENV}
       - DATABASE_URL=${DATABASE_URL}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
@@ -26,9 +26,9 @@ services:
         awslogs-region: ${AWS_REGION}
     image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
     expose:
-      - 8080
+      - ${PORT}
     ports:
-      - 8080:8080
+      - ${PORT}:${PORT}
     volumes:
       - .:/app
  
