@@ -2,6 +2,9 @@ version: '3.7'
 
 services:
   api:
+    build:
+      context: .
+      dockerfile: ./docker/ecr.dockerfile
     environment:
       - PORT=$PORT
       - ENV=$ENV
@@ -14,9 +17,6 @@ services:
       - AUTH0_API_AUDIENCE=$AUTH0_API_AUDIENCE
       - AUTH0_API_URL=$AUTH0_API_URL
       - AUTH0_OAUTH_URL=$AUTH0_OAUTH_URL
-    build:
-      context: .
-      dockerfile: ./docker/ecr.dockerfile
     image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
     expose:
       - $PORT

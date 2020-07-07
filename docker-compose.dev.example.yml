@@ -2,6 +2,9 @@ version: '3.7'
 
 services:
   api:
+    build:
+      context: .
+      dockerfile: ./docker/dev.dockerfile
     environment:
       - PORT=8080
       - ENV=development
@@ -14,9 +17,6 @@ services:
       - AUTH0_API_AUDIENCE=
       - AUTH0_API_URL=
       - AUTH0_OAUTH_URL=
-    build:
-      context: .
-      dockerfile: ./docker/dev.dockerfile
     image: dart3-api
     user: node
     expose:
