@@ -29,7 +29,6 @@ services:
       - ./nodemon.json:/app/nodemon.json
     depends_on:
       - database
-    command: yarn dev
   database:
     image: postgres:11.8
     environment:

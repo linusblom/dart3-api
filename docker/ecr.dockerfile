@@ -7,3 +7,5 @@ RUN yarn
 COPY . /app
 RUN yarn build
 RUN yarn install --prod
+
+CMD ["node", "dist/app.js"]
