@@ -9,6 +9,18 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    env:
+      PORT: 8080
+      ENV: production
+      DATABASE_URL: ${{ secrets.API_DATABASE_URL }}
+      AWS_ACCESS_KEY: ${{ secrets.API_AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.API_AWS_SECRET_KEY }}
+      AWS_REGION: eu-north-1
+      AUTH0_CLIENT_ID: ${{ secrets.API_AUTH0_CLIENT_ID }}
+      AUTH0_CLIENT_SECRET: ${{ secrets.API_AUTH0_CLIENT_SECRET }}
+      AUTH0_API_AUDIENCE: 'https://dart3.eu.auth0.com/api/v2/'
+      AUTH0_API_URL: 'https://dart3.eu.auth0.com/api/v2'
+      AUTH0_OAUTH_URL: 'https://dart3.eu.auth0.com/oauth/token'
 
     steps:
     - name: Checkout
@@ -28,17 +40,6 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
       env:
-        PORT: 8080
-        ENV: production
-        DATABASE_URL: ${{ secrets.API_DATABASE_URL }}
-        AWS_ACCESS_KEY: ${{ secrets.API_AWS_ACCESS_KEY }}
-        AWS_SECRET_KEY: ${{ secrets.API_AWS_SECRET_KEY }}
-        AWS_REGION: eu-north-1
-        AUTH0_CLIENT_ID: ${{ secrets.API_AUTH0_CLIENT_ID }}
-        AUTH0_CLIENT_SECRET: ${{ secrets.API_AUTH0_CLIENT_SECRET }}
-        AUTH0_API_AUDIENCE: 'https://dart3.eu.auth0.com/api/v2/'
-        AUTH0_API_URL: 'https://dart3.eu.auth0.com/api/v2'
-        AUTH0_OAUTH_URL: 'https://dart3.eu.auth0.com/oauth/token'
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: dart3-api
         IMAGE_TAG: ${{ github.sha }}

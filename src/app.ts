@@ -22,4 +22,6 @@ app
 
   .use(router.allowedMethods());
 
-app.listen(PORT, () => pino().info(`Dart3 server is listening on ${PORT}`));
+app.listen(PORT, () =>
+  pino().info(`Dart3 server is listening on ${PORT}, ${JSON.stringify(process.env)}`),
+);
