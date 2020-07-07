@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "main": "dist/app.js",
   "scripts": {
-    "start": "tsnd --respawn src/app.ts"
+    "build": "tsc",
+    "dev": "nodemon src/app.ts"
   },
   "author": "Linus Blom",
   "private": true,
@@ -12,7 +13,7 @@
     "@koa/cors": "^3.0.0",
     "aws-sdk": "^2.646.0",
     "bluebird": "^3.7.2",
-    "dart3-sdk": "^0.1.32",
+    "dart3-sdk": "^0.2.0",
     "dotenv": "^8.2.0",
     "http-status-codes": "^1.4.0",
     "humps": "^2.0.1",
@@ -41,8 +42,9 @@
     "@types/node-fetch": "^2.5.5",
     "@types/pino": "^6.0.0",
     "@types/seedrandom": "^2.4.28",
+    "nodemon": "^2.0.4",
     "prettier": "^1.19.1",
-    "ts-node-dev": "^1.0.0-pre.44",
+    "ts-node": "^8.10.2",
     "tslint": "^6.0.0",
     "typescript": "^3.8.3"
   }
