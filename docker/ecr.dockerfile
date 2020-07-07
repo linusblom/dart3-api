@@ -4,6 +4,6 @@ WORKDIR /app
 COPY package.json /app
 COPY yarn.lock /app
 RUN yarn
+COPY . /app
 RUN yarn build
 RUN yarn install --prod
-COPY . /app
