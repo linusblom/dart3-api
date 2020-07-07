@@ -13,9 +13,17 @@
                   "protocol": "tcp"
               }
           ],
-          "essential": true
+          "essential": true,
+          "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "dart3-api",
+                "awslogs-region": "eu-north-1",
+                "awslogs-stream-prefix": "dart3-api"
+            }
+        }
       }
-  ],
+  ],    
   "requiresCompatibilities": [
       "FARGATE"
   ],
