@@ -39,4 +39,3 @@ testem.log
 Thumbs.db
 
 docker-compose.dev.yml
-api-gw-definition.yml
