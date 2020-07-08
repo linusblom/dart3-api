@@ -4,7 +4,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: ./docker/dev.dockerfile
+      dockerfile: docker/dev.dockerfile
     environment:
       - PORT=8080
       - ENV=development
@@ -36,7 +36,7 @@ services:
       POSTGRES_USER: dart3
       POSTGRES_PASSWORD: dart3
     volumes:
-      - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d/
+      - ./sql:/docker-entrypoint-initdb.d/
       - dart3_dbdata:/var/lib/postgresql/data/
     ports:
       - 5432:5432
