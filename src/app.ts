@@ -34,11 +34,10 @@ app
       algorithms: ['RS256'],
       issuer: [AUTH0_APP_ISSUER],
       audience: [AUTH0_APP_AUDIENCE],
-    }),
+    }).unless({ path: [/^\/api\/v1\/ping$/] }),
   )
   .use(logger)
   .use(error)
-  .use(userId)
   .use(bodyParser())
   .use(router.routes())
   .use(router.allowedMethods());
