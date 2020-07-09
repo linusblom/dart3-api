@@ -14,6 +14,7 @@ router
     '/',
     validate(updateUserSchema),
     async (ctx: Context) => await ctrl.update(ctx, ctx.state.userId, ctx.request.body),
-  );
+  )
+  .post('/bootstrap', async (ctx: Context) => await ctrl.bootstrap(ctx, ctx.state.userId));
 
 export default router;
