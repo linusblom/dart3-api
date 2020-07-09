@@ -6,7 +6,7 @@ import { koaJwtSecret } from 'jwks-rsa';
 import jwt from 'koa-jwt';
 
 import { router } from './routes';
-import { error, logger, userId } from './middlewares';
+import { error, logger } from './middlewares';
 
 const { PORT, AUTH0_APP_AUDIENCE, AUTH0_APP_ISSUER } = process.env;
 const app = new Koa();
