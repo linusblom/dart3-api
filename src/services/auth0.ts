@@ -1,10 +1,12 @@
 import { Context } from 'koa';
+import { User } from 'dart3-sdk';
+import humps from 'humps';
 
 import { fetch } from '../utils';
 
 const {
-  AUTH0_CLIENT_ID,
-  AUTH0_CLIENT_SECRET,
+  AUTH0_API_CLIENT_ID,
+  AUTH0_API_CLIENT_SECRET,
   AUTH0_API_URL,
   AUTH0_OAUTH_URL,
   AUTH0_API_AUDIENCE,
@@ -19,7 +21,7 @@ export class Auth0Service {
       const { token_type, access_token, expires_in } = await fetch(ctx, AUTH0_OAUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `grant_type=client_credentials&client_id=${AUTH0_CLIENT_ID}&client_secret=${AUTH0_CLIENT_SECRET}&audience=${AUTH0_API_AUDIENCE}`,
+        body: `grant_type=client_credentials&client_id=${AUTH0_API_CLIENT_ID}&client_secret=${AUTH0_API_CLIENT_SECRET}&audience=${AUTH0_API_AUDIENCE}`,
       });
 
       this.token = `${token_type} ${access_token}`;
@@ -37,7 +39,7 @@ export class Auth0Service {
       headers: { authorization },
     });
 
-    return user;
+    return humps.camelizeKeys(user as object) as User;
   }
 
   async updateUser(ctx: Context, userId: string, body) {
@@ -46,9 +48,9 @@ export class Auth0Service {
     const user = await fetch(ctx, `${AUTH0_API_URL}/users/${userId}`, {
       method: 'patch',
       headers: { authorization, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(humps.decamelizeKeys(body)),
     });
 
-    return user;
+    return humps.camelizeKeys(user as object) as User;
   }
 }

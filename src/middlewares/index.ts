@@ -1,4 +1,4 @@
-export * from './authorize';
+export * from './user-id';
 export * from './error';
 export * from './validate';
 export * from './pin';

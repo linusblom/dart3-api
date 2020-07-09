@@ -1,10 +1,9 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 import { User } from 'dart3-sdk';
-import humps from 'humps';
 
 import { Auth0Service } from '../services';
-import { response } from '../utils';
+import { response, errorResponse } from '../utils';
 import { db } from '../database';
 
 export class UserController {
@@ -14,12 +13,26 @@ export class UserController {
     const user = await this.service.getUser(ctx, userId);
     const bank = await db.transaction.findBankByUserId(userId);
 
-    return response(ctx, httpStatusCodes.OK, { ...humps.camelizeKeys(user), bank });
+    return response(ctx, httpStatusCodes.OK, { ...user, bank });
   }
 
   async update(ctx: Context, userId: string, body: Partial<User>) {
-    const user = await this.service.updateUser(ctx, userId, humps.decamelizeKeys(body));
+    const user = await this.service.updateUser(ctx, userId, body);
 
-    return response(ctx, httpStatusCodes.OK, humps.camelizeKeys(user));
+    return response(ctx, httpStatusCodes.OK, user);
+  }
+
+  async bootstrap(ctx: Context, userId: string) {
+    const user = await this.service.getUser(ctx, userId);
+
+    if (user.userMetadata && user.userMetadata.bootstrapped) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
+
+    await this.service.updateUser(ctx, userId, { userMetadata: { bootstrapped: true } });
+
+    await db.jackpot.init(userId);
+
+    return response(ctx, httpStatusCodes.OK);
   }
 }
