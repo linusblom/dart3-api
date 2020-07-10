@@ -8,7 +8,7 @@ import { player as sql } from '../database/sql';
 export const pin = async (ctx: Context, next: Function) => {
   const pin = ctx.get('x-pin');
 
-  if (!/[0-9]{4}/.test(pin)) {
+  if (!/^[0-9]{4}$/.test(pin)) {
     return errorResponse(ctx, httpStatusCodes.FORBIDDEN);
   }
 

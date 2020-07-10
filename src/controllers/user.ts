@@ -29,9 +29,9 @@ export class UserController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    await this.service.updateUser(ctx, userId, { userMetadata: { bootstrapped: true } });
-
     await db.jackpot.init(userId);
+
+    await this.service.updateUser(ctx, userId, { userMetadata: { bootstrapped: true } });
 
     return response(ctx, httpStatusCodes.OK);
   }
