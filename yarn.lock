@@ -668,10 +668,10 @@ crypto-random-string@^2.0.0:
   resolved "https://registry.yarnpkg.com/crypto-random-string/-/crypto-random-string-2.0.0.tgz#ef2a7a966ec11083388369baa02ebead229b30d5"
   integrity sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==
 
-dart3-sdk@^0.2.2:
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.2.2.tgz#f99ab0f9e1f62a08e68d0595028dde1f286040d6"
-  integrity sha512-WkNT8oG0rztRRQCwJR2bXIiLkvoQWzX/L93l/NkToKrK5OSK5VoPrqEK/PHXGhQMAJ9QoeJcPfjdNQOrgl6kgA==
+dart3-sdk@^0.2.4:
+  version "0.2.4"
+  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.2.4.tgz#570f9b8d056e307e8a4477a3ca468e4ac74ee3ac"
+  integrity sha512-P7EUQdxcjUwze7UCO90cDWAmdnD+8SSa0OEG9fGuy8kukM4snBkiHojiT/LlMCSZkymEctyYww1EGI18IhjzmQ==
 
 debug@=3.1.0, debug@~3.1.0:
   version "3.1.0"
