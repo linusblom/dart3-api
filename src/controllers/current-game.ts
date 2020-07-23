@@ -120,13 +120,24 @@ export class CurrentGameController {
     return response(ctx, httpStatusCodes.OK, { matches, teams, hits });
   }
 
-  async createRound(ctx: Context, service: GameService, body: Score[]) {
+  async createRound(ctx: Context, service: GameService, userId: string, body: Score[]) {
     if (!service.game.startedAt) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    const roundResponse = await service.createRound(body);
+    const { gems, ...round } = await service.createRound(body);
+    const jackpotWinner = round.teams.find(t => t.gems >= 3 && !t.jackpotPaid);
+    let playerIds = [];
 
-    return response(ctx, httpStatusCodes.OK, roundResponse);
+    if (jackpotWinner) {
+      playerIds = await db.jackpot.winner(userId, service.game.id, jackpotWinner.id);
+    }
+
+    return response(ctx, httpStatusCodes.OK, {
+      ...round,
+      ...(gems && {
+        jackpot: { gems, playerIds },
+      }),
+    });
   }
 }

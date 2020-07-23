@@ -7,7 +7,7 @@ import jackpot from './jackpot';
 import ping from './ping';
 import { userId } from '../middlewares';
 
-export const router = new Router({ prefix: '/api/v1' });
+export const router = new Router({ prefix: '/v1' });
 
 router
   .use('/ping', ping.routes(), ping.allowedMethods())

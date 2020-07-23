@@ -1,4 +1,7 @@
-import { IDatabase, IMain } from 'pg-promise';
+import { IDatabase, IMain, txMode } from 'pg-promise';
+import { TransactionType, MatchTeam } from 'dart3-sdk';
+
+import { jackpot as sql, transaction as tSql, matchTeam as mtSql } from '../database/sql';
 
 export class JackpotRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
@@ -8,9 +11,44 @@ export class JackpotRepository {
   }
 
   get(userId: string) {
-    return this.db.one(
-      'SELECT value, next_value FROM jackpot WHERE user_id = $1 AND won_at IS NULL',
-      [userId],
-    );
+    return this.db.one(sql.findCurrent, { userId });
+  }
+
+  winner(userId: string, gameId: number, matchTeamId: number) {
+    return this.db.tx(async tx => {
+      const team = await tx.one(mtSql.findById, { id: matchTeamId });
+      const jackpot = await tx.one(sql.findCurrent, { userId });
+      const win = jackpot.value / team.playerIds.length;
+
+      await Promise.all(
+        team.playerIds.map(async playerId => {
+          await tx.one(tSql.credit, {
+            playerId,
+            description: 'JACKPOT!',
+            type: TransactionType.Win,
+            amount: win,
+          });
+
+          await tx.none(
+            'UPDATE team_player SET win = win + $1, xp = xp + 25000 WHERE player_id = $2 AND game_id = $3',
+            [win, playerId, gameId],
+          );
+
+          return Promise.resolve();
+        }),
+      );
+
+      await tx.none('UPDATE match_team SET jackpot_paid = true WHERE id = $1', [team.id]);
+      await tx.none(
+        'UPDATE jackpot SET match_team_id = $1, won_at = current_timestamp WHERE id = $2',
+        [team.id, jackpot.id],
+      );
+      await tx.none('INSERT INTO jackpot (user_id, value) VALUES ($1, $2)', [
+        userId,
+        jackpot.nextValue,
+      ]);
+
+      return team.playerIds;
+    });
   }
 }

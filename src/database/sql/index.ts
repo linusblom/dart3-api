@@ -1,5 +1,6 @@
 import { QueryFile, IQueryFileOptions } from 'pg-promise';
 import path from 'path';
+import { QLDB } from 'aws-sdk';
 
 function sql(file: string): QueryFile {
   const fullPath: string = path.join(__dirname, file);
@@ -25,6 +26,10 @@ export const hit = {
   findRoundHitsByTeamIds: sql('hit/find-round-hits-by-team-ids.sql'),
 };
 
+export const jackpot = {
+  findCurrent: sql('jackpot/find-current.sql'),
+};
+
 export const match = {
   findActiveByGameId: sql('match/find-active-by-game-id.sql'),
   findByGameId: sql('match/find-by-game-id.sql'),
@@ -32,12 +37,12 @@ export const match = {
 };
 
 export const matchTeam = {
-  findByGameId: sql('match-team/find-by-game-id.sql'),
+  findByGameIdWithScore: sql('match-team/find-by-game-id-with-score.sql'),
   findById: sql('match-team/find-by-id.sql'),
-  findByMatchIdOrderBySet: sql('match-team/find-by-match-id-order-by-set.sql'),
-  findByMatchId: sql('match-team/find-by-match-id.sql'),
   findFirstTeamId: sql('match-team/find-first-team-id.sql'),
   findNextTeamId: sql('match-team/find-next-team-id.sql'),
+  findByMatchIdWithScore: sql('match-team/find-by-match-id-with-score.sql'),
+  findResults: sql('match-team/find-results.sql'),
 };
 
 export const player = {

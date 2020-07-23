@@ -8,7 +8,7 @@ import jwt from 'koa-jwt';
 import { router } from './routes';
 import { error, logger } from './middlewares';
 
-const { PORT, AUTH0_APP_AUDIENCE, AUTH0_APP_ISSUER } = process.env;
+const { PORT, AUTH0_AUDIENCE, AUTH0_URL } = process.env;
 const app = new Koa();
 
 app
@@ -26,15 +26,15 @@ app
   .use(
     jwt({
       secret: koaJwtSecret({
-        jwksUri: `${AUTH0_APP_ISSUER}.well-known/jwks.json`,
+        jwksUri: `${AUTH0_URL}/.well-known/jwks.json`,
         cache: true,
         cacheMaxEntries: 5,
         cacheMaxAge: 36000000,
       }),
       algorithms: ['RS256'],
-      issuer: [AUTH0_APP_ISSUER],
-      audience: [AUTH0_APP_AUDIENCE],
-    }).unless({ path: [/^\/api\/v1\/ping$/] }),
+      issuer: [`${AUTH0_URL}/`],
+      audience: [AUTH0_AUDIENCE],
+    }).unless({ path: [/^\/v1\/ping$/] }),
   )
   .use(logger)
   .use(error)
