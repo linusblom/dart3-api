@@ -34,13 +34,10 @@ jobs:
         AWS_ACCESS_KEY: ${{ secrets.API_AWS_ACCESS_KEY }}
         AWS_SECRET_KEY: ${{ secrets.API_AWS_SECRET_KEY }}
         AWS_REGION: eu-north-1
-        AUTH0_API_CLIENT_ID: ${{ secrets.API_AUTH0_CLIENT_ID }}
-        AUTH0_API_CLIENT_SECRET: ${{ secrets.API_AUTH0_CLIENT_SECRET }}
-        AUTH0_API_AUDIENCE: 'https://dart3.eu.auth0.com/api/v2/'
-        AUTH0_API_URL: 'https://dart3.eu.auth0.com/api/v2'
-        AUTH0_APP_ISSUER: https://dart3.eu.auth0.com/
-        AUTH0_APP_AUDIENCE: https://dart3.app
-        AUTH0_OAUTH_URL: 'https://dart3.eu.auth0.com/oauth/token'
+        AUTH0_CLIENT_ID: ${{ secrets.API_AUTH0_CLIENT_ID }}
+        AUTH0_CLIENT_SECRET: ${{ secrets.API_AUTH0_CLIENT_SECRET }}
+        AUTH0_URL: https://dart3.eu.auth0.com
+        AUTH0_AUDIENCE: https://dart3.app
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: dart3-api
         IMAGE_TAG: ${{ github.sha }}

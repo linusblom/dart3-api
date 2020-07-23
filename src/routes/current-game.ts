@@ -28,7 +28,8 @@ router
   .post(
     '/round',
     validate(createRoundSchema),
-    async (ctx: Context) => await ctrl.createRound(ctx, ctx.state.service, ctx.request.body),
+    async (ctx: Context) =>
+      await ctrl.createRound(ctx, ctx.state.service, ctx.state.userId, ctx.request.body),
   );
 
 export default router;

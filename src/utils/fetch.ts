@@ -15,7 +15,7 @@ export const fetch = async (ctx: Context, url: string, init: RequestInit = { met
 
     return json;
   } catch (err) {
-    ctx.logger.info(err);
+    ctx.logger.error(err);
     return errorResponse(ctx, err.status);
   }
 };

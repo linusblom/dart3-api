@@ -1,4 +1,4 @@
-import { Game, Score, RoundScore, MatchActive, TransactionType, gameName } from 'dart3-sdk';
+import { Game, Score, RoundScore, MatchActive, TransactionType } from 'dart3-sdk';
 import { IMain, IDatabase } from 'pg-promise';
 
 import {
@@ -29,6 +29,15 @@ export abstract class GameService {
       const active = await tx.one(mSql.findActiveByGameId, { gameId: this.game.id });
       const roundScore = this.getRoundScore(score, active.round, active.currentScore);
 
+      if (active.set === 1 && active.leg === 1 && active.round <= 3) {
+        active.gems = roundScore.scores.map(score => score.value > 0 && gemRandomizer());
+
+        await tx.none('UPDATE match_team SET gems = gems + $1 WHERE id = $2', [
+          active.gems.filter(gem => gem).length,
+          active.matchTeamId,
+        ]);
+      }
+
       const matchTeamData = roundScore.scores.map((score, index) => ({
         match_team_id: active.matchTeamId,
         player_id: active.playerId,
@@ -39,7 +48,6 @@ export abstract class GameService {
         value: score.value,
         multiplier: score.multiplier,
         approved_score: score.approvedScore,
-        gem: gemRandomizer(active.round),
       }));
       const matchTeamCs = new ColumnSet(
         [
@@ -52,22 +60,20 @@ export abstract class GameService {
           'value',
           'multiplier',
           'approved_score',
-          'gem',
         ],
         { table: 'hit' },
       );
-
       await tx.none(insert(matchTeamData, matchTeamCs));
+
       await tx.none('UPDATE team_player SET xp = xp + $1 WHERE team_id = $2 AND player_id = $3', [
         roundScore.xp,
         active.teamId,
         active.playerId,
       ]);
-      await tx.none('UPDATE match_team SET score = $1, gems = gems + $2 WHERE id = $3', [
-        roundScore.nextScore,
-        matchTeamData.filter(({ gem }) => gem).length,
-        active.matchTeamId,
-      ]);
+      await tx.none(
+        'UPDATE match_team_score SET score = $1 WHERE match_team_id = $2 AND set = $3 AND leg = $4',
+        [roundScore.nextScore, active.matchTeamId, active.set, active.leg],
+      );
 
       return this.next(active, tx);
     });
@@ -117,15 +123,18 @@ export abstract class GameService {
       `,
       [active.id],
     );
-    const teams = await tx.any(
-      'SELECT id, score, gems, legs, sets FROM match_team WHERE match_id = $1',
-      [active.id],
-    );
+
+    const teams = await tx.any(mtSql.findByMatchIdWithScore, {
+      matchId: active.id,
+      set: active.set,
+      leg: active.leg,
+    });
+
     const hits = await tx.any(hSql.findRoundHitsByRoundAndTeamId, {
       matchId: active.id,
-      activeSet: active.set,
-      activeLeg: active.leg,
-      activeRound: active.round,
+      set: active.set,
+      leg: active.leg,
+      round: active.round,
       matchTeamIds: [active.matchTeamId],
     });
 
@@ -134,51 +143,87 @@ export abstract class GameService {
       matches: [match],
       teams,
       hits,
+      gems: active.gems,
     };
   }
 
   protected async nextLeg(active: MatchActive, tx) {
-    const { ColumnSet, update } = this.pgp.helpers;
-    const matchTeams = await tx.any(
-      'SELECT id, legs, sets, score FROM match_team WHERE match_id = $1 ORDER BY score DESC',
-      [active.id],
-    );
+    const { ColumnSet, update, insert } = this.pgp.helpers;
+    const matchTeams = await tx.any(mtSql.findByMatchIdWithScore, {
+      matchId: active.id,
+      set: active.set,
+      leg: active.leg,
+    });
 
     let endMatch = false;
     let endSet = false;
 
-    const matchTeamData = matchTeams
-      .reduce((acc, team, _, array) => {
-        if (team.score === array[0].score) {
-          team.legs++;
-        }
+    const matchTeamScoreUpdateData = matchTeams.map((team, _, array) => {
+      let legWin = false;
+      let setWin = false;
 
-        if (team.legs > this.game.legs / 2) {
-          endSet = true;
-          team.sets++;
-        }
+      if (team.score === array[0].score) {
+        legWin = true;
+        team.legs++;
+      }
 
-        if (team.sets > this.game.sets / 2) {
-          endMatch = true;
-        }
+      if (team.legs > this.game.legs / 2) {
+        endSet = true;
+        setWin = true;
+        team.sets++;
+      }
 
-        return [...acc, { ...team, score: this.getStartScore(), gems: 0 }];
-      }, [])
-      .map(team => ({ ...team, legs: endSet ? 0 : team.legs }));
+      if (team.sets > this.game.sets / 2) {
+        endMatch = true;
+      }
 
-    const matchTeamPlayerCs = new ColumnSet(['?id', 'legs', 'sets', 'score', 'gems'], {
-      table: 'match_team',
+      return {
+        match_team_id: team.id,
+        set: active.set,
+        leg: active.leg,
+        leg_win: legWin,
+        set_win: setWin,
+      };
     });
-    await tx.none(`${update(matchTeamData, matchTeamPlayerCs)} WHERE v.id = t.id`);
+
+    const matchTeamScoreUpdateCs = new ColumnSet(
+      [
+        '?match_team_id',
+        '?set',
+        '?leg',
+        'leg_win',
+        'set_win',
+        { name: 'ended_at', mod: '^', def: 'CURRENT_TIMESTAMP' },
+      ],
+      { table: 'match_team_score' },
+    );
+    await tx.none(
+      `${update(
+        matchTeamScoreUpdateData,
+        matchTeamScoreUpdateCs,
+      )} WHERE v.match_team_id = t.match_team_id AND v.set = t.set AND v.leg = t.leg`,
+    );
 
     if (endMatch) {
       return this.endMatch(active, tx);
     }
 
-    const first = await tx.one(mtSql.findFirstTeamId, { matchId: active.id });
     const { leg, set } = endSet
       ? { leg: 1, set: active.set + 1 }
       : { leg: active.leg + 1, set: active.set };
+
+    const matchTeamScoreInsertData = matchTeams.map(({ id }) => ({
+      match_team_id: id,
+      set,
+      leg,
+      score: this.getStartScore(),
+    }));
+    const matchTeamScoreInsertCs = new ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
+      table: 'match_team_score',
+    });
+    await tx.none(`${insert(matchTeamScoreInsertData, matchTeamScoreInsertCs)}`);
+
+    const first = await tx.one(mtSql.findFirstTeamId, { matchId: active.id });
 
     await tx.none(
       'UPDATE match SET active_match_team_id = $1, active_round = 1, active_leg = $2, active_set = $3 WHERE id = $4',
@@ -199,7 +244,7 @@ export abstract class GameService {
       [this.game.id],
     );
 
-    const teams = await tx.any(mtSql.findByMatchIdOrderBySet, { matchId: active.id });
+    const teams = await tx.any(mtSql.findResults, { matchId: active.id });
 
     await Promise.all(
       teams
@@ -210,13 +255,13 @@ export abstract class GameService {
 
           await tx.one(tSql.credit, {
             playerId,
-            description: `Congratulation (#${this.game.id})`,
+            description: `Winner game #${this.game.id}`,
             type: TransactionType.Win,
             amount: win,
           });
 
           await tx.none(
-            'UPDATE team_player SET win = $1, xp = xp + $2 WHERE player_id = $3 AND game_id = $4',
+            'UPDATE team_player SET win = win + $1, xp = xp + $2 WHERE player_id = $3 AND game_id = $4',
             [win, 100 * this.game.bet, playerId, this.game.id],
           );
 

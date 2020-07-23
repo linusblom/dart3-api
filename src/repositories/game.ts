@@ -24,6 +24,10 @@ export class GameRepository {
   }
 
   async start(id: number, tournament: boolean, startScore: number, teamPlayerIds: number[][]) {
+    if (tournament) {
+      throw 'not implemented';
+    }
+
     return this.db.tx(async tx => {
       const { ColumnSet, update, insert } = this.pgp.helpers;
 
@@ -38,27 +42,31 @@ export class GameRepository {
       const teamPlayerCs = new ColumnSet(['?id', 'team_id'], { table: 'team_player' });
       await tx.none(`${update(teamPlayerData, teamPlayerCs)} WHERE v.id = t.id`);
 
-      let matchTeamIds: DbId[] = [];
-      let matchIds: DbId[] = [];
+      const matchIds = await tx.any(
+        'INSERT INTO match (game_id, status, stage) VALUES ($1, $2, $3) RETURNING id',
+        [id, MatchStatus.Ready, 1],
+      );
 
-      if (tournament) {
-        throw 'not implemented';
-      } else {
-        matchIds = await tx.any(
-          'INSERT INTO match (game_id, status, stage) VALUES ($1, $2, $3) RETURNING id',
-          [id, MatchStatus.Ready, 1],
-        );
+      const matchTeamData = teamIds.map(({ id }) => ({
+        match_id: matchIds[0].id,
+        team_id: id,
+        score: startScore,
+      }));
+      const matchTeamCs = new ColumnSet(['match_id', 'team_id'], {
+        table: 'match_team',
+      });
+      const matchTeamIds = await tx.any(`${insert(matchTeamData, matchTeamCs)} RETURNING id`);
 
-        const matchTeamData = teamIds.map(({ id }) => ({
-          match_id: matchIds[0].id,
-          team_id: id,
-          score: startScore,
-        }));
-        const matchTeamCs = new ColumnSet(['match_id', 'team_id', 'score'], {
-          table: 'match_team',
-        });
-        matchTeamIds = await tx.any(`${insert(matchTeamData, matchTeamCs)} RETURNING id`);
-      }
+      const matchTeamScoreData = matchTeamIds.map(({ id }) => ({
+        match_team_id: id,
+        set: 1,
+        leg: 1,
+        score: startScore,
+      }));
+      const matchTeamScoreCs = new ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
+        table: 'match_team_score',
+      });
+      await tx.none(`${insert(matchTeamScoreData, matchTeamScoreCs)}`);
 
       await tx.none(
         `UPDATE match SET status = $1, started_at = current_timestamp, active_match_team_id = $2 WHERE id = $3`,

@@ -112,20 +112,33 @@ CREATE TABLE IF NOT EXISTS match (
 );
 
 CREATE TABLE IF NOT EXISTS match_team (
-  id        SERIAL,
-  match_id  INTEGER   NOT NULL,
-  team_id   INTEGER   NOT NULL,
-  sets      SMALLINT  DEFAULT 0,
-  legs      SMALLINT  DEFAULT 0,
-  score     SMALLINT  DEFAULT 0,
-  active    BOOLEAN   DEFAULT true,
-  gems      SMALLINT  DEFAULT 0,
+  id            SERIAL,
+  match_id      INTEGER   NOT NULL,
+  team_id       INTEGER   NOT NULL,
+  active        BOOLEAN   DEFAULT true,
+  gems          SMALLINT  DEFAULT 0,
+  jackpot_paid  BOOLEAN   DEFAULT false,
   PRIMARY KEY (id),
   FOREIGN KEY (match_id) REFERENCES match (id),
   FOREIGN KEY (team_id) REFERENCES team (id)
 );
 
 ALTER TABLE match ADD FOREIGN KEY (active_match_team_id) REFERENCES match_team (id);
+
+CREATE TABLE IF NOT EXISTS match_team_score (
+  id            SERIAL,
+  match_team_id INTEGER   NOT NULL,
+  set           SMALLINT  NOT NULL,
+  leg           SMALLINT  NOT NULL,
+  score         SMALLINT  NOT NULL,
+  leg_win       BOOLEAN   DEFAULT false,
+  set_win       BOOLEAN   DEFAULT false,
+  started_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ended_at      TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (match_team_id) REFERENCES match_team (id),
+  UNIQUE(match_team_id, set, leg)
+);
 
 CREATE TABLE IF NOT EXISTS hit (
   id              SERIAL,
@@ -138,7 +151,6 @@ CREATE TABLE IF NOT EXISTS hit (
   value           SMALLINT  NOT NULL,
   multiplier      SMALLINT  NOT NULL,
   approved_score  SMALLINT  NOT NULL,
-  gem             BOOLEAN   NOT NULL,
   PRIMARY KEY (id),
   FOREIGN KEY (match_team_id) REFERENCES match_team (id),
   FOREIGN KEY (player_id) REFERENCES player (id),

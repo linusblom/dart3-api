@@ -1,0 +1,1 @@
+SELECT id, value, next_value FROM jackpot WHERE user_id = ${userId} AND won_at IS NULL;
