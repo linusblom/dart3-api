@@ -1,9 +1,9 @@
 import seedrandom from 'seedrandom';
-import { TeamPlayer, Score } from 'dart3-sdk';
+import { TeamPlayer } from 'dart3-sdk';
 
 export const gemRandomizer = () => {
   const rng = seedrandom();
-  return Math.floor(rng() * 10) < 3;
+  return Math.floor(rng() * 80) < 3;
 };
 
 export const arrayRandomizer = () => Math.random() - 0.5;
