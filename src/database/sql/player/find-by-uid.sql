@@ -11,4 +11,4 @@ LEFT JOIN (
 ) AS t
 ON p.id = t.player_id
 WHERE p.uid = ${uid} AND p.user_id = ${userId} AND p.deleted_at IS NULL
-GROUP BY p.id;
+GROUP BY p.id

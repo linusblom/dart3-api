@@ -3,4 +3,4 @@ FROM hit h
 RIGHT JOIN match_team mt ON mt.id = h.match_team_id AND mt.match_id = ${matchId} 
 WHERE h.set = ${set} AND h.leg = ${leg} AND h.round = ${round} AND h.match_team_id IN (${matchTeamIds:csv})
 GROUP BY h.round, h.match_team_id, mt.id
-ORDER BY h.round;
+ORDER BY h.round

@@ -1,12 +1,10 @@
 import { Score, ScoreApproved } from 'dart3-sdk';
 
+import * as sql from '../database/sql';
 import { GameService } from './game';
+import { MatchActive } from '../models';
 
 export class HalveItService extends GameService {
-  getStartScore() {
-    return 0;
-  }
-
   private checkValue(scores: Score[], valid: number) {
     return scores.map(score => ({
       ...score,
@@ -69,5 +67,63 @@ export class HalveItService extends GameService {
       nextScore,
       xp: this.getRoundTotal(scores),
     };
+  }
+
+  async getLegResults(active: MatchActive, tx) {
+    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithScore, {
+      matchId: active.id,
+      set: active.set,
+      leg: active.leg,
+      orderBy: 'ORDER BY d.score DESC',
+    });
+
+    let endMatch = false;
+    let endSet = false;
+
+    const data = matchTeams.reduce((acc, team, index, array) => {
+      let legWin = false;
+      let setWin = false;
+      let position = index + 1;
+
+      if (team.score === array[0].score) {
+        legWin = true;
+        team.legs++;
+        position = 1;
+      } else if (team.score === array[index - 1].score) {
+        position = acc[index - 1].position;
+      }
+
+      if (team.legs > this.game.legs / 2) {
+        endSet = true;
+        setWin = true;
+        team.sets++;
+      }
+
+      if (team.sets > this.game.sets / 2) {
+        endMatch = true;
+      }
+
+      return [
+        ...acc,
+        {
+          match_team_id: team.id,
+          set: active.set,
+          leg: active.leg,
+          position,
+          leg_win: legWin,
+          set_win: setWin,
+        },
+      ];
+    }, []);
+
+    return { data, matchTeams, endMatch, endSet };
+  }
+
+  getNextAction(active: MatchActive, tx) {
+    if (active.round === 8) {
+      return this.nextLeg(active, tx);
+    }
+
+    return this.nextRound(active, tx);
   }
 }

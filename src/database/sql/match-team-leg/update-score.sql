@@ -1,0 +1,1 @@
+UPDATE match_team_leg SET score = ${score} WHERE match_team_id = ${matchTeamId} AND set = ${set} AND leg = ${leg}

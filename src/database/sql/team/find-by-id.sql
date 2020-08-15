@@ -1,3 +1,3 @@
-SELECT id, game_id, win
+SELECT id, game_id
 FROM team
-WHERE id = ${id};
+WHERE id = ${id}

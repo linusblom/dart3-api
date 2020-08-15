@@ -1,0 +1,1 @@
+UPDATE match_team SET gems = gems + ${gems} WHERE id = ${id}

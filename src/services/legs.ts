@@ -1,17 +1,16 @@
-import { Score, RoundScore, MatchActive } from 'dart3-sdk';
+import { Score, RoundScore } from 'dart3-sdk';
 
 import { GameService } from './game';
+import { MatchActive, LegResults, RoundResults } from '../models';
 
 export class LegsService extends GameService {
-  getStartScore() {
-    return 3;
-  }
-
   getRoundScore(scores: Score[], round: number, currentScore: number): RoundScore {
     throw new Error('Method not implemented.');
   }
-
-  getNextRoundTx(active: MatchActive) {
-    return () => {};
+  getLegResults(active: MatchActive, tx: any): Promise<LegResults> {
+    throw new Error('Method not implemented.');
+  }
+  getNextAction(active: MatchActive, tx: any): Promise<RoundResults> {
+    throw new Error('Method not implemented.');
   }
 }

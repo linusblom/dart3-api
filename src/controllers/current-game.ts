@@ -2,7 +2,7 @@ import { Context } from 'koa';
 import { CreateTeamPlayer, Score, TeamPlayer, Match, MatchTeam, RoundHit } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { response, errorResponse, playerRandomizer } from '../utils';
+import { response, errorResponse } from '../utils';
 import { GameService } from '../services';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
@@ -85,7 +85,7 @@ export class CurrentGameController {
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST, err);
     }
   }
 
@@ -94,16 +94,11 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    await db.task(async t => {
-      const { id, team, tournament } = service.game;
-      const players = await t.teamPlayer.findByGameIdWithPro(id);
-
-      if ((team || tournament) && (players.length % 2 !== 0 || players.length < 4)) {
-        return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-      }
-
-      await t.game.start(id, tournament, service.getStartScore(), playerRandomizer(players, team));
-    });
+    try {
+      await service.start();
+    } catch (err) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST, err);
+    }
 
     return response(ctx, httpStatusCodes.OK);
   }

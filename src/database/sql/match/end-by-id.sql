@@ -1,0 +1,1 @@
+UPDATE match SET status = 'completed', ended_at = current_timestamp WHERE id = ${id}

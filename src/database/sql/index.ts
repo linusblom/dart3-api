@@ -1,6 +1,5 @@
 import { QueryFile, IQueryFileOptions } from 'pg-promise';
 import path from 'path';
-import { QLDB } from 'aws-sdk';
 
 function sql(file: string): QueryFile {
   const fullPath: string = path.join(__dirname, file);
@@ -15,10 +14,12 @@ function sql(file: string): QueryFile {
 }
 
 export const game = {
+  endById: sql('game/end-by-id.sql'),
   create: sql('game/create.sql'),
   delete: sql('game/delete.sql'),
   findById: sql('game/find-by-id.sql'),
   findCurrent: sql('game/find-current.sql'),
+  start: sql('game/start.sql'),
 };
 
 export const hit = {
@@ -28,12 +29,20 @@ export const hit = {
 
 export const jackpot = {
   findCurrent: sql('jackpot/find-current.sql'),
+  increase: sql('jackpot/increase.sql'),
 };
 
 export const match = {
+  create: sql('match/create.sql'),
+  endById: sql('match/end-by-id.sql'),
   findActiveByGameId: sql('match/find-active-by-game-id.sql'),
   findByGameId: sql('match/find-by-game-id.sql'),
   findById: sql('match/find-by-id.sql'),
+  findByIdOnlyActive: sql('match/find-by-id-only-active.sql'),
+  nextLeg: sql('match/next-leg.sql'),
+  nextMatchTeam: sql('match/next-match-team.sql'),
+  nextRound: sql('match/next-round.sql'),
+  start: sql('match/start.sql'),
 };
 
 export const matchTeam = {
@@ -43,6 +52,11 @@ export const matchTeam = {
   findNextTeamId: sql('match-team/find-next-team-id.sql'),
   findByMatchIdWithScore: sql('match-team/find-by-match-id-with-score.sql'),
   findResults: sql('match-team/find-results.sql'),
+  updateGems: sql('match-team/update-gems.sql'),
+};
+
+export const matchTeamLeg = {
+  updateScore: sql('match-team-leg/update-score.sql'),
 };
 
 export const player = {
@@ -53,6 +67,7 @@ export const player = {
   findByPin: sql('player/find-by-pin.sql'),
   updatePin: sql('player/update-pin.sql'),
   update: sql('player/update.sql'),
+  updateXp: sql('player/update-xp.sql'),
 };
 
 export const team = {
@@ -65,6 +80,8 @@ export const teamPlayer = {
   delete: sql('team-player/delete.sql'),
   findByGameIdWithPro: sql('team-player/find-by-game-id-with-pro.sql'),
   findByGameId: sql('team-player/find-by-game-id.sql'),
+  updateWinXp: sql('team-player/update-win-xp.sql'),
+  updateXp: sql('team-player/update-xp.sql'),
 };
 
 export const transaction = {

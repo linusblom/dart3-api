@@ -8,7 +8,7 @@ SELECT d.player_ids, s.sets FROM (
 LEFT JOIN (
   SELECT match_team_id,
     COUNT(set_win) FILTER (WHERE set_win = true) AS sets
-  FROM match_team_score mts
+  FROM match_team_leg
   GROUP BY match_team_id
 ) s ON d.id = s.match_team_id
-ORDER BY s.sets DESC;
+ORDER BY s.sets DESC

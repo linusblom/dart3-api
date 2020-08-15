@@ -4,4 +4,3 @@ SELECT
   (SELECT COALESCE(SUM(debit) - SUM(credit), 0.00) AS turn_over FROM transaction WHERE type IN ('bet', 'refund') AND player_id IN
     (SELECT id FROM player WHERE user_id = ${userId} AND deleted_at is NULL)
   )
-;
