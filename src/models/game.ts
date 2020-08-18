@@ -17,15 +17,14 @@ export interface LegData {
 }
 
 export interface MatchActive {
-  id: number;
+  matchId: number;
   round: number;
   set: number;
   leg: number;
   matchTeamId: number;
   playerId: number;
   teamId: number;
-  currentScore: number;
-  gems?: boolean[];
+  matchTeamLegId: number;
 }
 
 export interface RoundResults {

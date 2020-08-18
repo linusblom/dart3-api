@@ -6,9 +6,7 @@ import { hit as sql } from '../database/sql';
 export class HitRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
-  async findRoundHitsByTeamIds(matchTeamsIds: number[]) {
-    return this.db.any<RoundHit>(sql.findRoundHitsByTeamIds, {
-      matchTeamsIds,
-    });
+  async findRoundHitsByPlayingMatchAndGameId(gameId: number) {
+    return this.db.any<RoundHit>(sql.findRoundHitsByPlayingMatchAndGameId, { gameId });
   }
 }

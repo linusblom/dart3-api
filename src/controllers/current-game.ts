@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { CreateTeamPlayer, Score, TeamPlayer, Match, MatchTeam, RoundHit } from 'dart3-sdk';
+import { CreateTeamPlayer, Score, TeamPlayer } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { response, errorResponse } from '../utils';
@@ -104,15 +104,18 @@ export class CurrentGameController {
   }
 
   async getMatches(ctx: Context, service: GameService) {
-    let matches: Match[], teams: MatchTeam[], hits: RoundHit[];
+    if (!service.game.startedAt) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
 
-    await db.task(async t => {
-      matches = await t.match.findByGameId(service.game.id);
-      teams = await t.matchTeam.findByGameId(service.game.id);
-      hits = await t.hit.findRoundHitsByTeamIds(teams.map(({ id }) => id));
+    return await db.task(async t => {
+      const { id } = service.game;
+      const matches = await t.match.findByGameId(id);
+      const teams = await t.matchTeam.findByGameId(id);
+      const hits = await t.hit.findRoundHitsByPlayingMatchAndGameId(id);
+
+      return response(ctx, httpStatusCodes.OK, { matches, teams, hits });
     });
-
-    return response(ctx, httpStatusCodes.OK, { matches, teams, hits });
   }
 
   async createRound(ctx: Context, service: GameService, userId: string, body: Score[]) {

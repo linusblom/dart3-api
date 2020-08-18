@@ -58,9 +58,10 @@ export class HalveItService extends GameService {
     return total > 0 ? currentTotal + total : Math.ceil(currentTotal / 2);
   }
 
-  getRoundScore(scores: Score[], round: number, currentScore: number) {
-    const approvedScores = this.getApprovedScore(scores, round);
-    const nextScore = this.getNextScore(approvedScores, currentScore);
+  async getRoundScore(scores: Score[], active: MatchActive, tx) {
+    const { score } = await tx.one(sql.matchTeamLeg.findScoreById, { id: active.matchTeamLegId });
+    const approvedScores = this.getApprovedScore(scores, active.round);
+    const nextScore = this.getNextScore(approvedScores, score);
 
     return {
       scores: approvedScores,
@@ -70,8 +71,8 @@ export class HalveItService extends GameService {
   }
 
   async getLegResults(active: MatchActive, tx) {
-    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithScore, {
-      matchId: active.id,
+    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
+      matchId: active.matchId,
       set: active.set,
       leg: active.leg,
       orderBy: 'ORDER BY d.score DESC',
@@ -119,11 +120,20 @@ export class HalveItService extends GameService {
     return { data, matchTeams, endMatch, endSet };
   }
 
-  getNextAction(active: MatchActive, tx) {
-    if (active.round === 8) {
-      return this.nextLeg(active, tx);
-    }
+  async next(active: MatchActive, tx) {
+    const next = await tx.oneOrNone(sql.matchTeam.findNextTeamId, {
+      matchTeamId: active.matchTeamId,
+      matchId: active.matchId,
+      set: active.set,
+      leg: active.leg,
+    });
 
-    return this.nextRound(active, tx);
+    if (next) {
+      return this.nextMatchTeam(next.id, active, tx);
+    } else if (active.round === 8) {
+      return this.nextLeg(active, tx);
+    } else {
+      return this.nextRound(active, tx);
+    }
   }
 }

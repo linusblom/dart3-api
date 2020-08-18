@@ -4,13 +4,13 @@ import { GameService } from './game';
 import { MatchActive, LegResults, RoundResults } from '../models';
 
 export class X01Service extends GameService {
-  getRoundScore(scores: Score[], round: number, currentScore: number): RoundScore {
+  getRoundScore(scores: Score[], active: MatchActive, tx): Promise<RoundScore> {
     throw new Error('Method not implemented.');
   }
   getLegResults(active: MatchActive, tx: any): Promise<LegResults> {
     throw new Error('Method not implemented.');
   }
-  getNextAction(active: MatchActive, tx: any): Promise<RoundResults> {
+  next(active: MatchActive, tx: any): Promise<RoundResults> {
     throw new Error('Method not implemented.');
   }
 }

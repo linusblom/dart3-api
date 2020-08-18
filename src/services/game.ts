@@ -1,4 +1,12 @@
-import { Game, Score, RoundScore, TransactionType, getStartScore, MatchStatus } from 'dart3-sdk';
+import {
+  Game,
+  Score,
+  RoundScore,
+  TransactionType,
+  getStartScore,
+  MatchStatus,
+  ScoreApproved,
+} from 'dart3-sdk';
 import { IMain, IDatabase } from 'pg-promise';
 import seedrandom from 'seedrandom';
 
@@ -6,11 +14,13 @@ import * as sql from '../database/sql';
 import { LegResults, MatchActive, RoundResults, TeamPlayerPro } from '../models';
 
 export abstract class GameService {
+  gems: boolean[] = [];
+
   constructor(public game: Game, protected db: IDatabase<any>, protected pgp: IMain) {}
 
-  abstract getRoundScore(scores: Score[], round: number, currentScore: number): RoundScore;
+  abstract getRoundScore(scores: Score[], active: MatchActive, tx): Promise<RoundScore>;
   abstract getLegResults(active: MatchActive, tx): Promise<LegResults>;
-  abstract getNextAction(active: MatchActive, tx): Promise<RoundResults>;
+  abstract next(active: MatchActive, tx): Promise<RoundResults>;
 
   protected getDartTotal(score: Score) {
     return score.value * score.multiplier;
@@ -44,8 +54,12 @@ export abstract class GameService {
       const { ColumnSet, update, insert } = this.pgp.helpers;
       const players = await tx.any(sql.teamPlayer.findByGameIdWithPro, { gameId });
 
-      if ((team || tournament) && (players.length % 2 !== 0 || players.length < 4)) {
-        throw 'players incorrect';
+      if (tournament) {
+        throw new Error('Tournament not implemented.');
+      }
+
+      if (team && (players.length % 2 !== 0 || players.length < 4)) {
+        throw new Error('Incorrect player count.');
       }
 
       const teamPlayerIds = this.randomizePlayers(players);
@@ -92,21 +106,25 @@ export abstract class GameService {
     });
   }
 
-  async createRound(score: Score[]) {
+  async updateGems(scores: ScoreApproved[], active: MatchActive, tx) {
+    if (active.set === 1 && active.leg === 1 && active.round <= 3) {
+      const rng = seedrandom();
+      this.gems = scores.map(score => score.value > 0 && Math.floor(rng() * 80) < 3);
+
+      await tx.none(sql.matchTeam.updateGems, {
+        gems: this.gems.filter(gem => gem).length,
+        id: active.matchTeamId,
+      });
+    }
+  }
+
+  async createRound(scores: Score[]) {
     return this.db.tx(async tx => {
       const { insert, ColumnSet } = this.pgp.helpers;
       const active = await tx.one(sql.match.findActiveByGameId, { gameId: this.game.id });
-      const roundScore = this.getRoundScore(score, active.round, active.currentScore);
-      const rng = seedrandom();
+      const roundScore = await this.getRoundScore(scores, active, tx);
 
-      if (active.set === 1 && active.leg === 1 && active.round <= 3) {
-        active.gems = roundScore.scores.map(score => score.value > 0 && Math.floor(rng() * 80) < 3);
-
-        await tx.none(sql.matchTeam.updateGems, {
-          gems: active.gems.filter(gem => gem).length,
-          id: active.matchTeamId,
-        });
-      }
+      await this.updateGems(roundScore.scores, active, tx);
 
       const mtData = roundScore.scores.map((score, index) => ({
         match_team_id: active.matchTeamId,
@@ -151,55 +169,39 @@ export abstract class GameService {
     });
   }
 
-  async next(active: MatchActive, tx) {
-    const next = await tx.oneOrNone(sql.matchTeam.findNextTeamId, {
-      matchTeamId: active.matchTeamId,
-      matchId: active.id,
-      set: active.set,
-      leg: active.leg,
-    });
-
-    if (next) {
-      return this.nextMatchTeam(next.id, active, tx);
-    }
-
-    return this.getNextAction(active, tx);
-  }
-
   protected async nextMatchTeam(matchTeamId: number, active: MatchActive, tx) {
-    await tx.none(sql.match.nextMatchTeam, { matchTeamId, id: active.id });
+    await tx.none(sql.match.nextMatchTeam, { matchTeamId, id: active.matchId });
 
     return this.roundResponse(active, tx);
   }
 
   async nextRound(active: MatchActive, tx) {
     const first = await tx.one(sql.matchTeam.findFirstTeamId, {
-      matchId: active.id,
+      matchId: active.matchId,
       set: active.set,
       leg: active.leg,
     });
 
-    await tx.none(sql.match.nextRound, { matchTeamId: first.id, id: active.id });
+    await tx.none(sql.match.nextRound, { matchTeamId: first.id, id: active.matchId });
 
     return this.roundResponse(active, tx);
   }
 
   protected async roundResponse(active: MatchActive, tx, game?: Game) {
-    const match = await tx.one(sql.match.findByIdOnlyActive, { id: active.id });
+    const match = await tx.one(sql.match.findByIdOnlyActive, { id: active.matchId });
 
-    const teams = await tx.any(sql.matchTeam.findByMatchIdWithScore, {
-      matchId: active.id,
+    const teams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
+      matchId: active.matchId,
       set: active.set,
       leg: active.leg,
       orderBy: '',
     });
 
-    const hits = await tx.any(sql.hit.findRoundHitsByRoundAndTeamId, {
-      matchId: active.id,
+    const hits = await tx.any(sql.hit.findRoundHitsBySetLegRoundAndMatchId, {
+      matchId: active.matchId,
       set: active.set,
       leg: active.leg,
       round: active.round,
-      matchTeamIds: [active.matchTeamId],
     });
 
     return {
@@ -207,7 +209,7 @@ export abstract class GameService {
       matches: [match],
       teams,
       hits,
-      gems: active.gems,
+      gems: this.gems,
     };
   }
 
@@ -253,17 +255,21 @@ export abstract class GameService {
     });
     await tx.none(`${insert(mtlInsertData, mtlInsertCs)}`);
 
-    const first = await tx.one(sql.matchTeam.findFirstTeamId, { matchId: active.id, leg, set });
+    const first = await tx.one(sql.matchTeam.findFirstTeamId, {
+      matchId: active.matchId,
+      leg,
+      set,
+    });
 
-    await tx.none(sql.match.nextLeg, { matchTeamId: first.id, leg, set, id: active.id });
+    await tx.none(sql.match.nextLeg, { matchTeamId: first.id, leg, set, id: active.matchId });
 
     return this.roundResponse(active, tx);
   }
 
   protected async endMatch(active: MatchActive, tx) {
-    await tx.none(sql.match.endById, { id: active.id });
+    await tx.none(sql.match.endById, { id: active.matchId });
     const game = await tx.one(sql.game.endById, { id: this.game.id });
-    const teams = await tx.any(sql.matchTeam.findResults, { matchId: active.id });
+    const teams = await tx.any(sql.matchTeam.findResults, { matchId: active.matchId });
 
     await Promise.all(
       teams

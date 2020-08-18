@@ -23,8 +23,11 @@ export const game = {
 };
 
 export const hit = {
-  findRoundHitsByRoundAndTeamId: sql('hit/find-round-hits-by-round-and-team-id.sql'),
-  findRoundHitsByTeamIds: sql('hit/find-round-hits-by-team-ids.sql'),
+  findByPreviousMatchTeam: sql('hit/find-by-previous-match-team.sql'),
+  findRoundHitsBySetLegRoundAndMatchId: sql(
+    'hit/find-round-hits-by-set-leg-round-and-match-id.sql',
+  ),
+  findRoundHitsByPlayingMatchAndGameId: sql('hit/find-round-hits-by-playing-match-and-game-id.sql'),
 };
 
 export const jackpot = {
@@ -46,16 +49,19 @@ export const match = {
 };
 
 export const matchTeam = {
-  findByGameIdWithScore: sql('match-team/find-by-game-id-with-score.sql'),
+  findByGameIdWithLeg: sql('match-team/find-by-game-id-with-leg.sql'),
   findById: sql('match-team/find-by-id.sql'),
   findFirstTeamId: sql('match-team/find-first-team-id.sql'),
   findNextTeamId: sql('match-team/find-next-team-id.sql'),
-  findByMatchIdWithScore: sql('match-team/find-by-match-id-with-score.sql'),
+  findByMatchIdWithLeg: sql('match-team/find-by-match-id-with-leg.sql'),
   findResults: sql('match-team/find-results.sql'),
   updateGems: sql('match-team/update-gems.sql'),
 };
 
 export const matchTeamLeg = {
+  findScoreById: sql('match-team-leg/find-score-by-id.sql'),
+  findTeamsLeftCount: sql('match-team-leg/find-teams-left-count.sql'),
+  setPosition: sql('match-team-leg/set-position.sql'),
   updateScore: sql('match-team-leg/update-score.sql'),
 };
 

@@ -11,6 +11,6 @@ export class MatchTeamRepository {
   }
 
   async findByGameId(gameId: number) {
-    return this.db.any<MatchTeam>(sql.findByGameIdWithScore, { gameId });
+    return this.db.any<MatchTeam>(sql.findByGameIdWithLeg, { gameId });
   }
 }
