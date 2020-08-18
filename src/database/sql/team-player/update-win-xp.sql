@@ -1,0 +1,1 @@
+UPDATE team_player SET win = win + ${win}, xp = xp + ${xp} WHERE player_id = ${playerId} AND game_id = ${gameId}

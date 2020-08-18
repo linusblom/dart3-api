@@ -1,0 +1,1 @@
+UPDATE game SET ended_at = current_timestamp WHERE id = ${id} RETURNING id, ended_at, prize_pool

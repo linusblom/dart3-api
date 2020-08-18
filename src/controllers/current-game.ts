@@ -1,8 +1,8 @@
 import { Context } from 'koa';
-import { CreateTeamPlayer, Score, TeamPlayer, Match, MatchTeam, RoundHit } from 'dart3-sdk';
+import { CreateTeamPlayer, Score, TeamPlayer } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
-import { response, errorResponse, playerRandomizer } from '../utils';
+import { response, errorResponse } from '../utils';
 import { GameService } from '../services';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
@@ -85,7 +85,7 @@ export class CurrentGameController {
 
       return response(ctx, httpStatusCodes.CREATED, { players });
     } catch (err) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST, err);
     }
   }
 
@@ -94,30 +94,28 @@ export class CurrentGameController {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
-    await db.task(async t => {
-      const { id, team, tournament } = service.game;
-      const players = await t.teamPlayer.findByGameIdWithPro(id);
-
-      if ((team || tournament) && (players.length % 2 !== 0 || players.length < 4)) {
-        return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-      }
-
-      await t.game.start(id, tournament, service.getStartScore(), playerRandomizer(players, team));
-    });
+    try {
+      await service.start();
+    } catch (err) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST, err);
+    }
 
     return response(ctx, httpStatusCodes.OK);
   }
 
   async getMatches(ctx: Context, service: GameService) {
-    let matches: Match[], teams: MatchTeam[], hits: RoundHit[];
+    if (!service.game.startedAt) {
+      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    }
 
-    await db.task(async t => {
-      matches = await t.match.findByGameId(service.game.id);
-      teams = await t.matchTeam.findByGameId(service.game.id);
-      hits = await t.hit.findRoundHitsByTeamIds(teams.map(({ id }) => id));
+    return await db.task(async t => {
+      const { id } = service.game;
+      const matches = await t.match.findByGameId(id);
+      const teams = await t.matchTeam.findByGameId(id);
+      const hits = await t.hit.findRoundHitsByPlayingMatchAndGameId(id);
+
+      return response(ctx, httpStatusCodes.OK, { matches, teams, hits });
     });
-
-    return response(ctx, httpStatusCodes.OK, { matches, teams, hits });
   }
 
   async createRound(ctx: Context, service: GameService, userId: string, body: Score[]) {

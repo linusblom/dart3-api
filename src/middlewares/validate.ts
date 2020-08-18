@@ -12,6 +12,6 @@ export const validate = (schema: ObjectSchema | ArraySchema) => async (
     await schema.validateAsync(ctx.request.body);
     return next();
   } catch (err) {
-    return errorResponse(ctx, httpStatusCodes.UNPROCESSABLE_ENTITY);
+    return errorResponse(ctx, httpStatusCodes.UNPROCESSABLE_ENTITY, err);
   }
 };

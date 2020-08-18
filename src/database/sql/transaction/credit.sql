@@ -4,4 +4,4 @@ FROM transaction
 WHERE player_id = ${playerId}
 ORDER BY created_at DESC
 LIMIT 1
-RETURNING id, type, debit, credit, balance, created_at, description;
+RETURNING id, type, debit, credit, balance, created_at, description

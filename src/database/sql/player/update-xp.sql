@@ -1,0 +1,1 @@
+UPDATE player p SET xp = p.xp + tp.xp FROM team_player tp WHERE tp.player_id = p.id AND p.id = ${id} AND tp.game_id = ${gameId}

@@ -21,7 +21,6 @@ CREATE TYPE transaction_type AS ENUM (
   'system',
   'bet',
   'win',
-  'jackpot',
   'deposit',
   'withdrawal',
   'transfer',
@@ -44,10 +43,8 @@ CREATE TABLE IF NOT EXISTS transaction (
 CREATE TYPE game_type AS ENUM (
   'halve_it',
   'legs',
-  '301_si_do',
-  '501_si_do',
-  '301_di_do',
-  '501_di_do'
+  '301',
+  '501'
 );
 
 CREATE TABLE IF NOT EXISTS game (
@@ -70,7 +67,6 @@ CREATE TABLE IF NOT EXISTS game (
 CREATE TABLE IF NOT EXISTS team (
   id            SERIAL,
   game_id       INTEGER   NOT NULL,
-  win           SMALLINT  DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (game_id) REFERENCES game (id)
 );
@@ -80,7 +76,7 @@ CREATE TABLE IF NOT EXISTS team_player (
   team_id       INTEGER,
   player_id     INTEGER       NOT NULL,
   game_id       INTEGER       NOT NULL,
-  xp            SMALLINT      DEFAULT 0,
+  xp            INTEGER      DEFAULT 0,
   win           NUMERIC(10,2) DEFAULT 0,
   PRIMARY KEY (id),
   FOREIGN KEY (team_id) REFERENCES team (id),
@@ -115,7 +111,6 @@ CREATE TABLE IF NOT EXISTS match_team (
   id            SERIAL,
   match_id      INTEGER   NOT NULL,
   team_id       INTEGER   NOT NULL,
-  active        BOOLEAN   DEFAULT true,
   gems          SMALLINT  DEFAULT 0,
   jackpot_paid  BOOLEAN   DEFAULT false,
   PRIMARY KEY (id),
@@ -125,12 +120,13 @@ CREATE TABLE IF NOT EXISTS match_team (
 
 ALTER TABLE match ADD FOREIGN KEY (active_match_team_id) REFERENCES match_team (id);
 
-CREATE TABLE IF NOT EXISTS match_team_score (
+CREATE TABLE IF NOT EXISTS match_team_leg (
   id            SERIAL,
   match_team_id INTEGER   NOT NULL,
   set           SMALLINT  NOT NULL,
   leg           SMALLINT  NOT NULL,
   score         SMALLINT  NOT NULL,
+  position      SMALLINT,
   leg_win       BOOLEAN   DEFAULT false,
   set_win       BOOLEAN   DEFAULT false,
   started_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

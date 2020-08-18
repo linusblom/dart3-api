@@ -1,0 +1,1 @@
+SELECT score FROM match_team_leg WHERE id = ${id}

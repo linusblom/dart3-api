@@ -1,5 +1,5 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { Match, MatchActive } from 'dart3-sdk';
+import { Match } from 'dart3-sdk';
 
 import { match as sql } from '../database/sql';
 

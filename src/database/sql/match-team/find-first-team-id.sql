@@ -1,1 +1,6 @@
-SELECT id FROM match_team WHERE active = true AND match_id = ${matchId} ORDER BY id LIMIT 1;
+SELECT mt.id
+FROM match_team mt
+RIGHT JOIN match_team_leg mtl ON mt.id = mtl.match_team_id AND mtl.set = ${set} AND mtl.leg = ${leg} AND mtl.position IS NULL
+WHERE mt.match_id = ${matchId}
+ORDER BY mt.id 
+LIMIT 1

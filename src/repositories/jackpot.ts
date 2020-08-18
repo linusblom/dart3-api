@@ -1,7 +1,7 @@
-import { IDatabase, IMain, txMode } from 'pg-promise';
-import { TransactionType, MatchTeam } from 'dart3-sdk';
+import { IDatabase, IMain } from 'pg-promise';
+import { TransactionType } from 'dart3-sdk';
 
-import { jackpot as sql, transaction as tSql, matchTeam as mtSql } from '../database/sql';
+import * as sql from '../database/sql';
 
 export class JackpotRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
@@ -11,18 +11,18 @@ export class JackpotRepository {
   }
 
   get(userId: string) {
-    return this.db.one(sql.findCurrent, { userId });
+    return this.db.one(sql.jackpot.findCurrent, { userId });
   }
 
   winner(userId: string, gameId: number, matchTeamId: number) {
     return this.db.tx(async tx => {
-      const team = await tx.one(mtSql.findById, { id: matchTeamId });
-      const jackpot = await tx.one(sql.findCurrent, { userId });
+      const team = await tx.one(sql.matchTeam.findById, { id: matchTeamId });
+      const jackpot = await tx.one(sql.jackpot.findCurrent, { userId });
       const win = jackpot.value / team.playerIds.length;
 
       await Promise.all(
         team.playerIds.map(async playerId => {
-          await tx.one(tSql.credit, {
+          await tx.one(sql.transaction.credit, {
             playerId,
             description: 'JACKPOT!',
             type: TransactionType.Win,

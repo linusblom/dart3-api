@@ -1,0 +1,1 @@
+UPDATE game SET started_at = current_timestamp, prize_pool = prize_pool * 0.9 WHERE id = ${id}

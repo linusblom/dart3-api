@@ -1,0 +1,1 @@
+UPDATE match SET active_match_team_id = ${matchTeamId} WHERE id = ${id}
