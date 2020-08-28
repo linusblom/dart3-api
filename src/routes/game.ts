@@ -16,6 +16,6 @@ router
     validate(createGameSchema),
     async (ctx: Context) => await ctrl.create(ctx, ctx.state.userId, ctx.request.body),
   )
-  .get('/:uid', async (ctx: Context) => await ctrl.getByUid(ctx, ctx.params.uid));
+  .get('/:uid', async (ctx: Context) => await ctrl.getByUid(ctx, ctx.state.userId, ctx.params.uid));
 
 export default router;

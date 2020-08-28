@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS game (
 CREATE TABLE IF NOT EXISTS team (
   id            SERIAL,
   game_id       INTEGER   NOT NULL,
+  position      SMALLINT,
   PRIMARY KEY (id),
   FOREIGN KEY (game_id) REFERENCES game (id)
 );
@@ -113,6 +114,7 @@ CREATE TABLE IF NOT EXISTS match_team (
   team_id       INTEGER   NOT NULL,
   gems          SMALLINT  DEFAULT 0,
   jackpot_paid  BOOLEAN   DEFAULT false,
+  position      SMALLINT,
   PRIMARY KEY (id),
   FOREIGN KEY (match_id) REFERENCES match (id),
   FOREIGN KEY (team_id) REFERENCES team (id)

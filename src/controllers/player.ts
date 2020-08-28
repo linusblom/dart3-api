@@ -24,14 +24,12 @@ export class PlayerController {
 
   async getByUid(ctx: Context, userId: string, uid: string) {
     try {
-      let player: Player, transactions: Transaction[];
+      return db.task(async t => {
+        const player = await t.player.findByUid(userId, uid);
+        const transactions = await t.transaction.findByPlayerId(player.id);
 
-      await db.task(async t => {
-        player = await t.player.findByUid(userId, uid);
-        transactions = await t.transaction.findByPlayerId(player.id);
+        return response(ctx, httpStatusCodes.OK, { ...player, transactions });
       });
-
-      return response(ctx, httpStatusCodes.OK, { ...player, transactions });
     } catch (err) {
       return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
     }
@@ -53,29 +51,25 @@ export class PlayerController {
   }
 
   async update(ctx: Context, userId: string, uid: string, body: UpdatePlayer) {
-    let player: Player;
-
-    await db.task(async t => {
+    return db.task(async t => {
       await t.player.update(userId, uid, body);
-      player = await t.player.findByUid(userId, uid);
-    });
+      const player = await t.player.findByUid(userId, uid);
 
-    return response(ctx, httpStatusCodes.OK, player);
+      return response(ctx, httpStatusCodes.OK, player);
+    });
   }
 
   async resetPin(ctx: Context, userId: string, uid: string) {
-    let player: Player;
-
     const pin = generatePin();
 
-    await db.task(async t => {
+    return db.task(async t => {
       await t.player.updatePin(userId, uid, pin);
-      player = await t.player.findByUid(userId, uid);
+      const player = await t.player.findByUid(userId, uid);
+
+      await sendEmail(player.email, generateResetPinEmail(player.name, pin));
+
+      return response(ctx, httpStatusCodes.OK);
     });
-
-    await sendEmail(player.email, generateResetPinEmail(player.name, pin));
-
-    return response(ctx, httpStatusCodes.OK);
   }
 
   async delete(ctx: Context, userId: string, uid: string) {
@@ -85,26 +79,22 @@ export class PlayerController {
   }
 
   async deposit(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
-    let player: DbId, transaction: Transaction;
+    return db.task(async t => {
+      const player = await t.player.findIdByUid(userId, uid);
+      const transaction = await t.transaction.deposit(player.id, body);
 
-    await db.task(async t => {
-      player = await t.player.findIdByUid(userId, uid);
-      transaction = await t.transaction.deposit(player.id, body);
+      return response(ctx, httpStatusCodes.OK, transaction);
     });
-
-    return response(ctx, httpStatusCodes.OK, transaction);
   }
 
   async withdrawal(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
     try {
-      let player: DbId, transaction: Transaction;
+      return db.task(async t => {
+        const player = await t.player.findIdByUid(userId, uid);
+        const transaction = await t.transaction.withdrawal(player.id, body);
 
-      await db.task(async t => {
-        player = await t.player.findIdByUid(userId, uid);
-        transaction = await t.transaction.withdrawal(player.id, body);
+        return response(ctx, httpStatusCodes.OK, transaction);
       });
-
-      return response(ctx, httpStatusCodes.OK, transaction);
     } catch (err) {
       if (err.code === SQLErrorCode.CheckViolation) {
         return errorResponse(ctx, httpStatusCodes.NOT_ACCEPTABLE);
