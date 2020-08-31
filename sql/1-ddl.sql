@@ -43,8 +43,13 @@ CREATE TABLE IF NOT EXISTS transaction (
 CREATE TYPE game_type AS ENUM (
   'halve_it',
   'legs',
-  '301',
-  '501'
+  'x01'
+);
+
+CREATE TYPE check_in_out AS ENUM (
+  'straight',
+  'double',
+  'master'
 );
 
 CREATE TABLE IF NOT EXISTS game (
@@ -58,6 +63,10 @@ CREATE TABLE IF NOT EXISTS game (
   sets              SMALLINT      NOT NULL,
   bet               SMALLINT      NOT NULL,
   prize_pool        NUMERIC(10,2) DEFAULT 0,
+  start_score       SMALLINT      NOT NULL,
+  check_in          check_in_out  NOT NULL,
+  check_out         check_in_out  NOT NULL,
+  tie_break         SMALLINT      NOT NULL,
   created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at        TIMESTAMP,
   ended_at          TIMESTAMP,

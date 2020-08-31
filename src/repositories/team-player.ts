@@ -1,5 +1,5 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { TeamPlayer, TransactionType, GameType, gameName } from 'dart3-sdk';
+import { TeamPlayer, TransactionType, GameType } from 'dart3-sdk';
 
 import * as sql from '../database/sql';
 
@@ -16,7 +16,7 @@ export class TeamPlayerRepository {
 
       await tx.one(sql.transaction.debit, {
         playerId,
-        description: `${gameName(type)} (#${gameId})`,
+        description: `Game #${gameId}`,
         type: TransactionType.Bet,
         amount: bet,
       });
@@ -32,7 +32,7 @@ export class TeamPlayerRepository {
 
       await tx.one(sql.transaction.credit, {
         playerId,
-        description: `${gameName(type)} (#${gameId})`,
+        description: `Game #${gameId}`,
         type: TransactionType.Refund,
         amount: bet,
       });

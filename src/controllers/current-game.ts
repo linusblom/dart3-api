@@ -53,6 +53,7 @@ export class CurrentGameController {
         const { id, bet, type } = service.game;
 
         players = await t.teamPlayer.create(id, player.id, bet, type);
+        ctx.logger.info({ playerId: player.id, gameId: id, bet }, 'Player joined game');
       });
 
       return response(ctx, httpStatusCodes.CREATED, { players });
@@ -81,6 +82,7 @@ export class CurrentGameController {
         const { id, bet, type } = service.game;
 
         players = await t.teamPlayer.delete(id, player.id, bet, type);
+        ctx.logger.info({ playerId: player.id, gameId: id, bet }, 'Player left game');
       });
 
       return response(ctx, httpStatusCodes.CREATED, { players });
@@ -95,12 +97,14 @@ export class CurrentGameController {
     }
 
     try {
-      await service.start();
+      const game = await service.start();
+
+      ctx.logger.info({ game }, 'Start game');
+
+      return response(ctx, httpStatusCodes.OK);
     } catch (err) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST, err);
     }
-
-    return response(ctx, httpStatusCodes.OK);
   }
 
   async getMatches(ctx: Context, service: GameService) {
@@ -128,14 +132,15 @@ export class CurrentGameController {
     let playerIds = [];
 
     if (jackpotWinner) {
-      playerIds = await db.jackpot.winner(userId, service.game.id, jackpotWinner.id);
+      const winner = await db.jackpot.winner(userId, service.game.id, jackpotWinner.id);
+      playerIds = winner.team.playerIds;
+
+      ctx.logger.info({ ...winner, gameId: service.game.id }, 'Jackpot winners');
     }
 
     return response(ctx, httpStatusCodes.OK, {
       ...round,
-      ...(gems && {
-        jackpot: { gems, playerIds },
-      }),
+      jackpot: { gems, playerIds },
     });
   }
 }

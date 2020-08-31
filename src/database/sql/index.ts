@@ -80,7 +80,7 @@ export const player = {
 export const team = {
   findByGameId: sql('team/find-by-game-id.sql'),
   findById: sql('team/find-by-id.sql'),
-  findWinnersByGameId: sql('team/find-winners-by-game-id.sql'),
+  findResultsByGameId: sql('team/find-results-by-game-id.sql'),
 };
 
 export const teamPlayer = {

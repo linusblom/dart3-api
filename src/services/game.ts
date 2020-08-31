@@ -1,12 +1,4 @@
-import {
-  Game,
-  Score,
-  RoundScore,
-  TransactionType,
-  getStartScore,
-  MatchStatus,
-  ScoreApproved,
-} from 'dart3-sdk';
+import { Game, Score, RoundScore, TransactionType, MatchStatus, ScoreApproved } from 'dart3-sdk';
 import { IMain, IDatabase } from 'pg-promise';
 import seedrandom from 'seedrandom';
 
@@ -49,6 +41,13 @@ export abstract class GameService {
       .fill([])
       .map(() => [proSortedPlayers.shift().id, proSortedPlayers.pop().id])
       .sort(arrayRandomizer);
+  }
+
+  private getFractionParts(fraction: string) {
+    return {
+      numerator: +fraction.substr(0, fraction.indexOf('/')),
+      denominator: +fraction.substr(fraction.indexOf('/') + 1),
+    };
   }
 
   async start() {
@@ -95,23 +94,30 @@ export abstract class GameService {
         match_team_id: id,
         set: 1,
         leg: 1,
-        score: getStartScore(type),
+        score: this.game.startScore,
       }));
       const matchTeamLegCs = new this.ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
         table: 'match_team_leg',
       });
       await tx.none(`${this.insert(matchTeamLegData, matchTeamLegCs)}`);
 
+      const { JACKPOT1_FEE, JACKPOT2_FEE } = process.env;
       await tx.none(sql.match.start, { matchTeamId: matchTeamIds[0].id, id: matchIds[0].id });
-      await tx.none(sql.jackpot.increase, { gameId });
-      await tx.none(sql.game.start, { id: gameId });
+      await tx.none(sql.jackpot.increase, { gameId, fee1: +JACKPOT1_FEE, fee2: +JACKPOT2_FEE });
+      const game = await tx.one(sql.game.start, { id: gameId, fee: +JACKPOT1_FEE + +JACKPOT2_FEE });
+
+      return game;
     });
   }
 
   async updateGems(scores: ScoreApproved[], active: MatchActive, tx) {
     if (active.set === 1 && active.leg === 1 && active.round <= 3) {
       const rng = seedrandom();
-      this.gems = scores.map(score => score.value > 0 && Math.floor(rng() * 10) < 3);
+      const { numerator, denominator } = this.getFractionParts(process.env.JACKPOT_GEM);
+
+      this.gems = scores.map(
+        score => score.value > 0 && Math.floor(rng() * denominator) < numerator,
+      );
 
       await tx.none(sql.matchTeam.updateGems, {
         gems: this.gems.filter(gem => gem).length,
@@ -248,7 +254,7 @@ export abstract class GameService {
       match_team_id: id,
       set,
       leg,
-      score: getStartScore(this.game.type),
+      score: this.game.startScore,
     }));
     const mtlInsertCs = new this.ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
       table: 'match_team_leg',

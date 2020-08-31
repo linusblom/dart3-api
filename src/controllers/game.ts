@@ -24,9 +24,9 @@ export class GameController {
     try {
       return db.task(async t => {
         const game = await t.game.findByUid(userId, uid);
-        const winners = await t.team.findWinnersByGameId(game.id);
+        const results = await t.team.findResultsByGameId(game.id);
 
-        return response(ctx, httpStatusCodes.OK, { ...game, winners });
+        return response(ctx, httpStatusCodes.OK, { ...game, results });
       });
     } catch (err) {
       return errorResponse(ctx, httpStatusCodes.NOT_FOUND);

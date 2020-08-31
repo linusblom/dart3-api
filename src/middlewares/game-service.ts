@@ -9,8 +9,7 @@ import { game as sql } from '../database/sql';
 
 const getGameService = (game: Game): GameService => {
   switch (game.type) {
-    case GameType.Five01:
-    case GameType.Three01:
+    case GameType.X01:
       return new X01Service(game, db, pgp);
     case GameType.Legs:
       return new LegsService(game, db, pgp);
