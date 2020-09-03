@@ -52,7 +52,7 @@ export abstract class GameService {
 
   async start() {
     return this.db.tx(async tx => {
-      const { id: gameId, team, tournament, type } = this.game;
+      const { id: gameId, team, tournament } = this.game;
       const players = await tx.any(sql.teamPlayer.findByGameIdWithPro, { gameId });
 
       if (tournament) {
@@ -69,10 +69,13 @@ export abstract class GameService {
       const teamIds = await tx.any(`${this.insert(teamData, teamCs)} RETURNING id`);
 
       const teamPlayerData = teamPlayerIds.reduce(
-        (acc, ids, index) => [...acc, ...ids.map(id => ({ id, team_id: teamIds[index].id }))],
+        (acc, ids, index) => [
+          ...acc,
+          ...ids.map(id => ({ id, team_id: teamIds[index].id, xp: 10 * this.game.bet })),
+        ],
         [],
       );
-      const teamPlayerCs = new this.ColumnSet(['?id', 'team_id'], { table: 'team_player' });
+      const teamPlayerCs = new this.ColumnSet(['?id', 'team_id', 'xp'], { table: 'team_player' });
       await tx.none(`${this.update(teamPlayerData, teamPlayerCs)} WHERE v.id = t.id`);
 
       const matchIds = await tx.any(sql.match.create, {
@@ -313,7 +316,7 @@ export abstract class GameService {
 
           await tx.none(sql.teamPlayer.updateWinXp, {
             win,
-            xp: 10 * this.game.bet,
+            xp: 1000,
             playerId,
             gameId: this.game.id,
           });

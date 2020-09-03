@@ -17,7 +17,7 @@ export const createGameSchema = Joi.object({
     .allow(10, 20, 50, 100, 200, 500, 1000)
     .required(),
   startScore: Joi.number()
-    .allow(0, 3, 5, 7, 301, 501, 701, 1001)
+    .allow(0, 3, 5, 7, 301, 501, 701)
     .required(),
   checkIn: Joi.string()
     .valid(Check.Straight, Check.Double, Check.Master)
