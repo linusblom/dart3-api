@@ -1,7 +1,7 @@
 import { Score } from 'dart3-sdk';
 
 import { GameService } from './game';
-import { MatchActive, LegResults, RoundResults } from '../models';
+import { MatchActive, RoundResults } from '../models';
 import * as sql from '../database/sql';
 
 export class LegsService extends GameService {

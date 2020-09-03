@@ -41,6 +41,9 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: dart3-api
         IMAGE_TAG: ${{ github.sha }}
+        JACKPOT1_FEE: 0.08
+        JACKPOT2_FEE: 0.02
+        JACKPOT_GEM: 3/100
       run: |
         docker-compose build
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

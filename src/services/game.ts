@@ -1,12 +1,4 @@
-import {
-  Game,
-  Score,
-  RoundScore,
-  TransactionType,
-  getStartScore,
-  MatchStatus,
-  ScoreApproved,
-} from 'dart3-sdk';
+import { Game, Score, RoundScore, TransactionType, MatchStatus, ScoreApproved } from 'dart3-sdk';
 import { IMain, IDatabase } from 'pg-promise';
 import seedrandom from 'seedrandom';
 
@@ -14,6 +6,9 @@ import * as sql from '../database/sql';
 import { LegResults, MatchActive, RoundResults, TeamPlayerPro } from '../models';
 
 export abstract class GameService {
+  ColumnSet = this.pgp.helpers.ColumnSet;
+  update = this.pgp.helpers.update;
+  insert = this.pgp.helpers.insert;
   gems: boolean[] = [];
 
   constructor(public game: Game, protected db: IDatabase<any>, protected pgp: IMain) {}
@@ -48,10 +43,16 @@ export abstract class GameService {
       .sort(arrayRandomizer);
   }
 
+  private getFractionParts(fraction: string) {
+    return {
+      numerator: +fraction.substr(0, fraction.indexOf('/')),
+      denominator: +fraction.substr(fraction.indexOf('/') + 1),
+    };
+  }
+
   async start() {
     return this.db.tx(async tx => {
-      const { id: gameId, team, tournament, type } = this.game;
-      const { ColumnSet, update, insert } = this.pgp.helpers;
+      const { id: gameId, team, tournament } = this.game;
       const players = await tx.any(sql.teamPlayer.findByGameIdWithPro, { gameId });
 
       if (tournament) {
@@ -64,15 +65,18 @@ export abstract class GameService {
 
       const teamPlayerIds = this.randomizePlayers(players);
       const teamData = teamPlayerIds.map(() => ({ game_id: gameId }));
-      const teamCs = new ColumnSet(['game_id'], { table: 'team' });
-      const teamIds = await tx.any(`${insert(teamData, teamCs)} RETURNING id`);
+      const teamCs = new this.ColumnSet(['game_id'], { table: 'team' });
+      const teamIds = await tx.any(`${this.insert(teamData, teamCs)} RETURNING id`);
 
       const teamPlayerData = teamPlayerIds.reduce(
-        (acc, ids, index) => [...acc, ...ids.map(id => ({ id, team_id: teamIds[index].id }))],
+        (acc, ids, index) => [
+          ...acc,
+          ...ids.map(id => ({ id, team_id: teamIds[index].id, xp: 10 * this.game.bet })),
+        ],
         [],
       );
-      const teamPlayerCs = new ColumnSet(['?id', 'team_id'], { table: 'team_player' });
-      await tx.none(`${update(teamPlayerData, teamPlayerCs)} WHERE v.id = t.id`);
+      const teamPlayerCs = new this.ColumnSet(['?id', 'team_id', 'xp'], { table: 'team_player' });
+      await tx.none(`${this.update(teamPlayerData, teamPlayerCs)} WHERE v.id = t.id`);
 
       const matchIds = await tx.any(sql.match.create, {
         gameId,
@@ -84,32 +88,39 @@ export abstract class GameService {
         match_id: matchIds[0].id,
         team_id: id,
       }));
-      const matchTeamCs = new ColumnSet(['match_id', 'team_id'], {
+      const matchTeamCs = new this.ColumnSet(['match_id', 'team_id'], {
         table: 'match_team',
       });
-      const matchTeamIds = await tx.any(`${insert(matchTeamData, matchTeamCs)} RETURNING id`);
+      const matchTeamIds = await tx.any(`${this.insert(matchTeamData, matchTeamCs)} RETURNING id`);
 
       const matchTeamLegData = matchTeamIds.map(({ id }) => ({
         match_team_id: id,
         set: 1,
         leg: 1,
-        score: getStartScore(type),
+        score: this.game.startScore,
       }));
-      const matchTeamLegCs = new ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
+      const matchTeamLegCs = new this.ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
         table: 'match_team_leg',
       });
-      await tx.none(`${insert(matchTeamLegData, matchTeamLegCs)}`);
+      await tx.none(`${this.insert(matchTeamLegData, matchTeamLegCs)}`);
 
+      const { JACKPOT1_FEE, JACKPOT2_FEE } = process.env;
       await tx.none(sql.match.start, { matchTeamId: matchTeamIds[0].id, id: matchIds[0].id });
-      await tx.none(sql.jackpot.increase, { gameId });
-      await tx.none(sql.game.start, { id: gameId });
+      await tx.none(sql.jackpot.increase, { gameId, fee1: +JACKPOT1_FEE, fee2: +JACKPOT2_FEE });
+      const game = await tx.one(sql.game.start, { id: gameId, fee: +JACKPOT1_FEE + +JACKPOT2_FEE });
+
+      return game;
     });
   }
 
   async updateGems(scores: ScoreApproved[], active: MatchActive, tx) {
     if (active.set === 1 && active.leg === 1 && active.round <= 3) {
       const rng = seedrandom();
-      this.gems = scores.map(score => score.value > 0 && Math.floor(rng() * 80) < 3);
+      const { numerator, denominator } = this.getFractionParts(process.env.JACKPOT_GEM);
+
+      this.gems = scores.map(
+        score => score.value > 0 && Math.floor(rng() * denominator) < numerator,
+      );
 
       await tx.none(sql.matchTeam.updateGems, {
         gems: this.gems.filter(gem => gem).length,
@@ -120,7 +131,6 @@ export abstract class GameService {
 
   async createRound(scores: Score[]) {
     return this.db.tx(async tx => {
-      const { insert, ColumnSet } = this.pgp.helpers;
       const active = await tx.one(sql.match.findActiveByGameId, { gameId: this.game.id });
       const roundScore = await this.getRoundScore(scores, active, tx);
 
@@ -137,7 +147,7 @@ export abstract class GameService {
         multiplier: score.multiplier,
         approved_score: score.approvedScore,
       }));
-      const mtCs = new ColumnSet(
+      const mtCs = new this.ColumnSet(
         [
           'match_team_id',
           'player_id',
@@ -151,7 +161,7 @@ export abstract class GameService {
         ],
         { table: 'hit' },
       );
-      await tx.none(insert(mtData, mtCs));
+      await tx.none(this.insert(mtData, mtCs));
 
       await tx.none(sql.teamPlayer.updateXp, {
         xp: roundScore.xp,
@@ -214,10 +224,9 @@ export abstract class GameService {
   }
 
   protected async nextLeg(active: MatchActive, tx) {
-    const { ColumnSet, update, insert } = this.pgp.helpers;
     const legResults = await this.getLegResults(active, tx);
 
-    const mtlUpdateCs = new ColumnSet(
+    const mtlUpdateCs = new this.ColumnSet(
       [
         '?match_team_id',
         '?set',
@@ -230,7 +239,7 @@ export abstract class GameService {
       { table: 'match_team_leg' },
     );
     await tx.none(
-      `${update(
+      `${this.update(
         legResults.data,
         mtlUpdateCs,
       )} WHERE v.match_team_id = t.match_team_id AND v.set = t.set AND v.leg = t.leg`,
@@ -248,12 +257,12 @@ export abstract class GameService {
       match_team_id: id,
       set,
       leg,
-      score: getStartScore(this.game.type),
+      score: this.game.startScore,
     }));
-    const mtlInsertCs = new ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
+    const mtlInsertCs = new this.ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
       table: 'match_team_leg',
     });
-    await tx.none(`${insert(mtlInsertData, mtlInsertCs)}`);
+    await tx.none(`${this.insert(mtlInsertData, mtlInsertCs)}`);
 
     const first = await tx.one(sql.matchTeam.findFirstTeamId, {
       matchId: active.matchId,
@@ -268,12 +277,32 @@ export abstract class GameService {
 
   protected async endMatch(active: MatchActive, tx) {
     await tx.none(sql.match.endById, { id: active.matchId });
+
+    const results = await tx.any(sql.matchTeam.findResults, { matchId: active.matchId });
+    const mtData = results.reduce((acc, team, index, array) => {
+      let position = index + 1;
+
+      if (team.sets === array[0].sets) {
+        position = 1;
+      } else if (team.sets === array[index - 1].sets) {
+        position = acc[index - 1].position;
+      }
+
+      return [...acc, { id: team.teamId, position }];
+    }, []);
+    const mtCs = new this.ColumnSet(['?id', 'position'], { table: 'match_team' });
+    await tx.none(`${this.update(mtData, mtCs)} WHERE v.id = t.id`);
+
+    return this.endGame(active, tx);
+  }
+
+  protected async endGame(active: MatchActive, tx) {
     const game = await tx.one(sql.game.endById, { id: this.game.id });
-    const teams = await tx.any(sql.matchTeam.findResults, { matchId: active.matchId });
+    const winners = await tx.any(sql.matchTeam.findWinners, { matchId: active.matchId });
 
     await Promise.all(
-      teams
-        .filter((team, _, array) => team.sets === array[0].sets)
+      winners
+        .filter(team => team.position === 1)
         .reduce((acc, { playerIds }) => [...acc, ...playerIds], [])
         .map(async (playerId, _, array) => {
           const win = game.prizePool / array.length;
@@ -287,7 +316,7 @@ export abstract class GameService {
 
           await tx.none(sql.teamPlayer.updateWinXp, {
             win,
-            xp: 10 * this.game.bet,
+            xp: 1000,
             playerId,
             gameId: this.game.id,
           });
@@ -297,12 +326,16 @@ export abstract class GameService {
     );
 
     await Promise.all(
-      teams
+      winners
         .reduce((acc, { playerIds }) => [...acc, ...playerIds], [])
         .map(async playerId =>
           tx.none(sql.player.updateXp, { id: playerId, gameId: this.game.id }),
         ),
     );
+
+    const teamData = winners.map(({ teamId, position }) => ({ id: teamId, position }));
+    const teamCs = new this.ColumnSet(['?id', 'position'], { table: 'team' });
+    await tx.none(`${this.update(teamData, teamCs)} WHERE v.id = t.id`);
 
     return this.roundResponse(active, tx, game);
   }

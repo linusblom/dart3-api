@@ -13,4 +13,8 @@ export class TeamRepository {
   async findById(id: number) {
     return this.db.oneOrNone<Team>(sql.findById, { id });
   }
+
+  async findResultsByGameId(gameId: number) {
+    return this.db.any(sql.findResultsByGameId, { gameId });
+  }
 }

@@ -19,6 +19,7 @@ export class JackpotRepository {
       const team = await tx.one(sql.matchTeam.findById, { id: matchTeamId });
       const jackpot = await tx.one(sql.jackpot.findCurrent, { userId });
       const win = jackpot.value / team.playerIds.length;
+      const xp = 20000 / team.playerIds.length;
 
       await Promise.all(
         team.playerIds.map(async playerId => {
@@ -30,8 +31,8 @@ export class JackpotRepository {
           });
 
           await tx.none(
-            'UPDATE team_player SET win = win + $1, xp = xp + 25000 WHERE player_id = $2 AND game_id = $3',
-            [win, playerId, gameId],
+            'UPDATE team_player SET win = win + $1, xp = xp + $2 WHERE player_id = $3 AND game_id = $4',
+            [win, xp, playerId, gameId],
           );
 
           return Promise.resolve();
@@ -48,7 +49,7 @@ export class JackpotRepository {
         jackpot.nextValue,
       ]);
 
-      return team.playerIds;
+      return { team, jackpot };
     });
   }
 }

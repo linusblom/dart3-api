@@ -43,8 +43,13 @@ CREATE TABLE IF NOT EXISTS transaction (
 CREATE TYPE game_type AS ENUM (
   'halve_it',
   'legs',
-  '301',
-  '501'
+  'x01'
+);
+
+CREATE TYPE check_in_out AS ENUM (
+  'straight',
+  'double',
+  'master'
 );
 
 CREATE TABLE IF NOT EXISTS game (
@@ -58,6 +63,10 @@ CREATE TABLE IF NOT EXISTS game (
   sets              SMALLINT      NOT NULL,
   bet               SMALLINT      NOT NULL,
   prize_pool        NUMERIC(10,2) DEFAULT 0,
+  start_score       SMALLINT      NOT NULL,
+  check_in          check_in_out  NOT NULL,
+  check_out         check_in_out  NOT NULL,
+  tie_break         SMALLINT      NOT NULL,
   created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at        TIMESTAMP,
   ended_at          TIMESTAMP,
@@ -67,6 +76,7 @@ CREATE TABLE IF NOT EXISTS game (
 CREATE TABLE IF NOT EXISTS team (
   id            SERIAL,
   game_id       INTEGER   NOT NULL,
+  position      SMALLINT,
   PRIMARY KEY (id),
   FOREIGN KEY (game_id) REFERENCES game (id)
 );
@@ -113,6 +123,7 @@ CREATE TABLE IF NOT EXISTS match_team (
   team_id       INTEGER   NOT NULL,
   gems          SMALLINT  DEFAULT 0,
   jackpot_paid  BOOLEAN   DEFAULT false,
+  position      SMALLINT,
   PRIMARY KEY (id),
   FOREIGN KEY (match_id) REFERENCES match (id),
   FOREIGN KEY (team_id) REFERENCES team (id)

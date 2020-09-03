@@ -17,7 +17,7 @@ export const game = {
   endById: sql('game/end-by-id.sql'),
   create: sql('game/create.sql'),
   delete: sql('game/delete.sql'),
-  findById: sql('game/find-by-id.sql'),
+  findByUid: sql('game/find-by-uid.sql'),
   findCurrent: sql('game/find-current.sql'),
   start: sql('game/start.sql'),
 };
@@ -55,6 +55,7 @@ export const matchTeam = {
   findNextTeamId: sql('match-team/find-next-team-id.sql'),
   findByMatchIdWithLeg: sql('match-team/find-by-match-id-with-leg.sql'),
   findResults: sql('match-team/find-results.sql'),
+  findWinners: sql('match-team/find-winners.sql'),
   updateGems: sql('match-team/update-gems.sql'),
 };
 
@@ -79,6 +80,7 @@ export const player = {
 export const team = {
   findByGameId: sql('team/find-by-game-id.sql'),
   findById: sql('team/find-by-id.sql'),
+  findResultsByGameId: sql('team/find-results-by-game-id.sql'),
 };
 
 export const teamPlayer = {

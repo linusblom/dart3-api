@@ -7,8 +7,8 @@ import { game as sql } from '../database/sql';
 export class GameRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
-  async findById(userId: string, id: number) {
-    return this.db.oneOrNone<Game>(sql.findById, { userId, id });
+  async findByUid(userId: string, uid: string) {
+    return this.db.one<Game>(sql.findByUid, { userId, uid });
   }
 
   async findCurrent(userId: string) {
