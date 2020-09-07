@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { User, MetaData } from 'dart3-sdk';
+import { User } from 'dart3-sdk';
 import humps from 'humps';
 
 import { fetch } from '../utils';
