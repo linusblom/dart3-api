@@ -1,18 +1,25 @@
 import { Context } from 'koa';
 import nodeFetch, { RequestInit } from 'node-fetch';
+import humps from 'humps';
 
 import { errorResponse } from './response';
 
-export const fetch = async (ctx: Context, url: string, init: RequestInit = { method: 'get' }) => {
+export const fetch = async <T = any>(
+  ctx: Context,
+  url: string,
+  init: RequestInit = { method: 'get' },
+): Promise<T> => {
   try {
     const response = await nodeFetch(url, init);
-    const json = await response.json();
 
-    if (json.statusCode >= 399) {
-      return errorResponse(ctx, json.statusCode, json);
+    if (!response.ok) {
+      return errorResponse(ctx, response.status, response);
     }
 
-    return json;
+    const json = await response.json();
+    const camelized: T = humps.camelizeKeys(json) as any;
+
+    return camelized;
   } catch (err) {
     return errorResponse(ctx, err.status, err);
   }

@@ -3,11 +3,13 @@ import { CreateTeamPlayer, Score, TeamPlayer } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { response, errorResponse } from '../utils';
-import { GameService } from '../services';
+import { GameService, Auth0Service } from '../services';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
 
 export class CurrentGameController {
+  constructor(private auth0 = Auth0Service.getInstance()) {}
+
   async get(ctx: Context, service: GameService) {
     if (service.game.startedAt) {
       return response(ctx, httpStatusCodes.OK, service.game);
@@ -91,15 +93,28 @@ export class CurrentGameController {
     }
   }
 
-  async start(ctx: Context, service: GameService) {
+  async start(ctx: Context, service: GameService, userId: string) {
     if (service.game.startedAt) {
       return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
     }
 
     try {
-      const game = await service.start();
+      const prizePool = Number(service.game.prizePool);
+      const metaData = await this.auth0.getUserMetaData(ctx, userId);
+      const game = await service.start(metaData);
 
-      ctx.logger.info({ game }, 'Start game');
+      ctx.logger.info(
+        {
+          game,
+          fees: {
+            currency: metaData.currency,
+            jackpot: metaData.jackpotFee * prizePool,
+            nextJackpot: metaData.nextJackpotFee * prizePool,
+            rake: metaData.rake * prizePool,
+          },
+        },
+        'Start game',
+      );
 
       return response(ctx, httpStatusCodes.OK);
     } catch (err) {

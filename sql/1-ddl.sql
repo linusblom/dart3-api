@@ -176,6 +176,18 @@ CREATE TABLE IF NOT EXISTS jackpot (
   FOREIGN KEY (match_team_id) REFERENCES match_team (id)
 );
 
+CREATE TABLE IF NOT EXISTS invoice (
+  id          SERIAL,
+  user_id     CHAR(30)        NOT NULL,
+  balance     NUMERIC(10,2)   DEFAULT 0,
+  start_at    DATE            DEFAULT date_trunc('month', current_date)::date,
+  end_at      DATE            DEFAULT (date_trunc('month', current_date) + interval '1 month' - interval '1 day')::date,
+  due_at      DATE            DEFAULT (date_trunc('month', current_date) + interval '2 month' - interval '1 day')::date,
+  paid_at     DATE,
+  PRIMARY KEY (id),
+  UNIQUE(user_id, start_at)
+);
+
 CREATE OR REPLACE VIEW match_active_player_id AS
 SELECT m.id, m.game_id, m.status, m.active_round, m.active_set, m.active_leg, m.active_match_team_id, m.stage, m.created_at, m.started_at, m.ended_at, tp.player_id as active_player_id
 FROM match m

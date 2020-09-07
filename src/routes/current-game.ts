@@ -23,7 +23,10 @@ router
     async (ctx: Context) =>
       await ctrl.deleteTeamPlayer(ctx, ctx.state.service, ctx.params.uid, ctx.state.userId),
   )
-  .patch('/start', async (ctx: Context) => await ctrl.start(ctx, ctx.state.service))
+  .patch(
+    '/start',
+    async (ctx: Context) => await ctrl.start(ctx, ctx.state.service, ctx.state.userId),
+  )
   .get('/match', async (ctx: Context) => await ctrl.getMatches(ctx, ctx.state.service))
   .post(
     '/round',

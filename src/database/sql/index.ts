@@ -77,6 +77,10 @@ export const player = {
   updateXp: sql('player/update-xp.sql'),
 };
 
+export const invoice = {
+  debit: sql('invoice/debit.sql'),
+};
+
 export const team = {
   findByGameId: sql('team/find-by-game-id.sql'),
   findById: sql('team/find-by-id.sql'),

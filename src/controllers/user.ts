@@ -7,7 +7,7 @@ import { response, errorResponse } from '../utils';
 import { db } from '../database';
 
 export class UserController {
-  constructor(private service = new Auth0Service()) {}
+  constructor(private service = Auth0Service.getInstance()) {}
 
   async get(ctx: Context, userId: string) {
     const user = await this.service.getUser(ctx, userId);

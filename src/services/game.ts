@@ -1,4 +1,12 @@
-import { Game, Score, RoundScore, TransactionType, MatchStatus, ScoreApproved } from 'dart3-sdk';
+import {
+  Game,
+  Score,
+  RoundScore,
+  TransactionType,
+  MatchStatus,
+  ScoreApproved,
+  MetaData,
+} from 'dart3-sdk';
 import { IMain, IDatabase } from 'pg-promise';
 import seedrandom from 'seedrandom';
 
@@ -50,7 +58,7 @@ export abstract class GameService {
     };
   }
 
-  async start() {
+  async start({ jackpotFee, nextJackpotFee, rake }: MetaData) {
     return this.db.tx(async tx => {
       const { id: gameId, team, tournament } = this.game;
       const players = await tx.any(sql.teamPlayer.findByGameIdWithPro, { gameId });
@@ -104,10 +112,20 @@ export abstract class GameService {
       });
       await tx.none(`${this.insert(matchTeamLegData, matchTeamLegCs)}`);
 
-      const { JACKPOT1_FEE, JACKPOT2_FEE } = process.env;
+      if (rake > 0) {
+        await tx.none(sql.invoice.debit, { gameId, rake: rake });
+      }
+
       await tx.none(sql.match.start, { matchTeamId: matchTeamIds[0].id, id: matchIds[0].id });
-      await tx.none(sql.jackpot.increase, { gameId, fee1: +JACKPOT1_FEE, fee2: +JACKPOT2_FEE });
-      const game = await tx.one(sql.game.start, { id: gameId, fee: +JACKPOT1_FEE + +JACKPOT2_FEE });
+      await tx.none(sql.jackpot.increase, {
+        gameId,
+        fee: jackpotFee,
+        nextFee: nextJackpotFee,
+      });
+      const game = await tx.one(sql.game.start, {
+        id: gameId,
+        fee: jackpotFee + nextJackpotFee + rake,
+      });
 
       return game;
     });
