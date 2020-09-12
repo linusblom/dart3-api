@@ -14,4 +14,9 @@ export const updatePlayerSchema = Joi.object({
     .min(3)
     .required(),
   pro: Joi.boolean().required(),
+  double: Joi.number()
+    .min(1)
+    .max(25)
+    .not(21, 22, 23, 24)
+    .required(),
 });

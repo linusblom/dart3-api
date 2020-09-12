@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS player (
   avatar                VARCHAR,
   xp                    INTEGER       DEFAULT 0,
   pro                   BOOLEAN       DEFAULT false,
+  double                SMALLINT      DEFAULT 20,
   PRIMARY KEY (id)
 );
 
