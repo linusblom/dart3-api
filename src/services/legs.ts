@@ -15,7 +15,7 @@ export class LegsService extends GameService {
       set: active.set,
       leg: active.leg,
       round: active.round,
-      matchTeamId: active.matchTeamId,
+      order: active.order,
     });
 
     if (!prevTeam || totalScore > prevTeam.score || totalScore === 180) {
@@ -99,7 +99,7 @@ export class LegsService extends GameService {
     }
 
     const next = await tx.oneOrNone(sql.matchTeam.findNextTeamId, {
-      matchTeamId: active.matchTeamId,
+      order: active.order,
       matchId: active.matchId,
       set: active.set,
       leg: active.leg,

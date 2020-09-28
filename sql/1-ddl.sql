@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS game (
   uid               CHAR(20)      NOT NULL,
   type              game_type     NOT NULL,
   tournament        BOOLEAN       NOT NULL,
+  random            BOOLEAN       NOT NULL,
   team              BOOLEAN       NOT NULL,
   legs              SMALLINT      NOT NULL,
   sets              SMALLINT      NOT NULL,
@@ -96,8 +97,8 @@ CREATE TABLE IF NOT EXISTS team_player (
 );
 
 CREATE TYPE match_status AS ENUM (
-  'waiting',
-  'ready',
+  'pending',
+  'order',
   'playing',
   'completed'
 );
@@ -122,6 +123,7 @@ CREATE TABLE IF NOT EXISTS match_team (
   id            SERIAL,
   match_id      INTEGER   NOT NULL,
   team_id       INTEGER   NOT NULL,
+  "order"       SMALLINT  NOT NULL,
   gems          SMALLINT  DEFAULT 0,
   jackpot_paid  BOOLEAN   DEFAULT false,
   position      SMALLINT,
@@ -148,6 +150,13 @@ CREATE TABLE IF NOT EXISTS match_team_leg (
   UNIQUE(match_team_id, set, leg)
 );
 
+CREATE TYPE target AS ENUM (
+  'inner',
+  'triple',
+  'outer',
+  'double'
+);
+
 CREATE TABLE IF NOT EXISTS hit (
   id              SERIAL,
   match_team_id   INTEGER,
@@ -158,6 +167,7 @@ CREATE TABLE IF NOT EXISTS hit (
   set             SMALLINT  NOT NULL,
   value           SMALLINT  NOT NULL,
   multiplier      SMALLINT  NOT NULL,
+  target          target,
   approved_score  SMALLINT  NOT NULL,
   PRIMARY KEY (id),
   FOREIGN KEY (match_team_id) REFERENCES match_team (id),
@@ -180,10 +190,12 @@ CREATE TABLE IF NOT EXISTS jackpot (
 CREATE TABLE IF NOT EXISTS invoice (
   id          SERIAL,
   user_id     CHAR(30)        NOT NULL,
+  debit       NUMERIC(10,2)   DEFAULT 0,
+  credit      NUMERIC(10,2)   DEFAULT 0,
   balance     NUMERIC(10,2)   DEFAULT 0,
-  start_at    DATE            DEFAULT date_trunc('month', current_date)::date,
-  end_at      DATE            DEFAULT (date_trunc('month', current_date) + interval '1 month' - interval '1 day')::date,
-  due_at      DATE            DEFAULT (date_trunc('month', current_date) + interval '2 month' - interval '1 day')::date,
+  start_at    DATE            DEFAULT date_trunc('month', CURRENT_DATE)::date,
+  end_at      DATE            DEFAULT (date_trunc('month', CURRENT_DATE) + interval '1 month' - interval '1 day')::date,
+  due_at      DATE            DEFAULT (date_trunc('month', CURRENT_DATE) + interval '2 month' - interval '1 day')::date,
   paid_at     DATE,
   PRIMARY KEY (id),
   UNIQUE(user_id, start_at)

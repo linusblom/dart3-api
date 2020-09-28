@@ -43,10 +43,6 @@ export class CurrentGameController {
     userId: string,
     body: CreateTeamPlayer,
   ) {
-    if (service.game.startedAt) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
-
     let players: TeamPlayer[];
 
     try {
@@ -72,10 +68,6 @@ export class CurrentGameController {
   }
 
   async deleteTeamPlayer(ctx: Context, service: GameService, uid: string, userId: string) {
-    if (service.game.startedAt) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
-
     let players: TeamPlayer[];
 
     try {
@@ -94,10 +86,6 @@ export class CurrentGameController {
   }
 
   async start(ctx: Context, service: GameService, userId: string) {
-    if (service.game.startedAt) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
-
     try {
       const prizePool = Number(service.game.prizePool);
       const metaData = await this.auth0.getUserMetaData(ctx, userId);
@@ -123,10 +111,6 @@ export class CurrentGameController {
   }
 
   async getMatches(ctx: Context, service: GameService) {
-    if (!service.game.startedAt) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
-
     return await db.task(async t => {
       const { id } = service.game;
       const matches = await t.match.findByGameId(id);
@@ -138,10 +122,6 @@ export class CurrentGameController {
   }
 
   async createRound(ctx: Context, service: GameService, userId: string, body: Score[]) {
-    if (!service.game.startedAt) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
-
     const { gems, ...round } = await service.createRound(body);
     const jackpotWinner = round.teams.find(t => t.gems >= 3 && !t.jackpotPaid);
     let playerIds = [];

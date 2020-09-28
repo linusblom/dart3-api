@@ -33,7 +33,7 @@ export abstract class GameService {
     return scores.reduce((total, score) => total + this.getDartTotal(score), 0);
   }
 
-  private randomizePlayers(players: TeamPlayerPro[]) {
+  private randomizeOrder(players: TeamPlayerPro[]) {
     const arrayRandomizer = () => Math.random() - 0.5;
 
     if (!this.game.team) {
@@ -71,7 +71,7 @@ export abstract class GameService {
         throw new Error('Incorrect player count.');
       }
 
-      const teamPlayerIds = this.randomizePlayers(players);
+      const teamPlayerIds = this.randomizeOrder(players);
       const teamData = teamPlayerIds.map(() => ({ game_id: gameId }));
       const teamCs = new this.ColumnSet(['game_id'], { table: 'team' });
       const teamIds = await tx.any(`${this.insert(teamData, teamCs)} RETURNING id`);
@@ -88,15 +88,16 @@ export abstract class GameService {
 
       const matchIds = await tx.any(sql.match.create, {
         gameId,
-        status: MatchStatus.Ready,
+        status: MatchStatus.Pending,
         stage: 1,
       });
 
-      const matchTeamData = teamIds.map(({ id }) => ({
+      const matchTeamData = teamIds.map(({ id }, index) => ({
         match_id: matchIds[0].id,
         team_id: id,
+        order: index + 1,
       }));
-      const matchTeamCs = new this.ColumnSet(['match_id', 'team_id'], {
+      const matchTeamCs = new this.ColumnSet(['match_id', 'team_id', 'order'], {
         table: 'match_team',
       });
       const matchTeamIds = await tx.any(`${this.insert(matchTeamData, matchTeamCs)} RETURNING id`);
@@ -116,7 +117,11 @@ export abstract class GameService {
         await tx.none(sql.invoice.debit, { gameId, rake: rake });
       }
 
-      await tx.none(sql.match.start, { matchTeamId: matchTeamIds[0].id, id: matchIds[0].id });
+      await tx.none(sql.match.start, {
+        matchTeamId: matchTeamIds[0].id,
+        id: matchIds[0].id,
+        status: this.game.random ? MatchStatus.Playing : MatchStatus.Order,
+      });
       await tx.none(sql.jackpot.increase, {
         gameId,
         fee: jackpotFee,
@@ -147,9 +152,37 @@ export abstract class GameService {
     }
   }
 
+  async nearestBullOrder(active: MatchActive, scores: Score[], tx) {
+    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithOrder, {
+      matchId: active.matchId,
+    });
+    const mtData = matchTeams
+      .map(({ id }, index) => ({ id, ...scores[index] }))
+      .sort(
+        (a, b) =>
+          a.bullDistance - b.bullDistance || b.score - a.score || b.multiplier - a.multiplier,
+      )
+      .map(({ id }, index) => ({ id, order: index + 1 }));
+    const mtCs = new this.ColumnSet(['?id', 'order'], { table: 'match_team' });
+    await tx.none(`${this.update(mtData, mtCs)} WHERE v.id = t.id`);
+
+    await tx.none(sql.match.start, {
+      matchTeamId: mtData[0].id,
+      id: active.matchId,
+      status: MatchStatus.Playing,
+    });
+
+    return this.roundResponse(active, tx);
+  }
+
   async createRound(scores: Score[]) {
     return this.db.tx(async tx => {
       const active = await tx.one(sql.match.findActiveByGameId, { gameId: this.game.id });
+
+      if (active.status === MatchStatus.Order) {
+        return this.nearestBullOrder(active, scores, tx);
+      }
+
       const roundScore = await this.getRoundScore(scores, active, tx);
 
       await this.updateGems(roundScore.scores, active, tx);
@@ -163,6 +196,7 @@ export abstract class GameService {
         set: active.set,
         value: score.value,
         multiplier: score.multiplier,
+        target: score.target,
         approved_score: score.approvedScore,
       }));
       const mtCs = new this.ColumnSet(
@@ -175,6 +209,7 @@ export abstract class GameService {
           'set',
           'value',
           'multiplier',
+          'target',
           'approved_score',
         ],
         { table: 'hit' },
@@ -222,7 +257,7 @@ export abstract class GameService {
       matchId: active.matchId,
       set: active.set,
       leg: active.leg,
-      orderBy: '',
+      orderBy: 'ORDER BY d.order',
     });
 
     const hits = await tx.any(sql.hit.findRoundHitsBySetLegRoundAndMatchId, {
@@ -306,7 +341,7 @@ export abstract class GameService {
         position = acc[index - 1].position;
       }
 
-      return [...acc, { id: team.teamId, position }];
+      return [...acc, { id: team.id, position }];
     }, []);
     const mtCs = new this.ColumnSet(['?id', 'position'], { table: 'match_team' });
     await tx.none(`${this.update(mtData, mtCs)} WHERE v.id = t.id`);

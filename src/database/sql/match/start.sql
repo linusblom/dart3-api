@@ -1,1 +1,1 @@
-UPDATE match SET status = 'playing', started_at = current_timestamp, active_match_team_id = ${matchTeamId} WHERE id = ${id}
+UPDATE match SET status = ${status}, started_at = current_timestamp, active_match_team_id = ${matchTeamId} WHERE id = ${id}

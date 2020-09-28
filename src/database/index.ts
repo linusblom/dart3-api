@@ -13,6 +13,7 @@ import {
   MatchRepository,
   MatchTeamRepository,
   JackpotRepository,
+  InvoiceRepository,
 } from '../repositories';
 
 type ExtendedProtocol = IDatabase<Extensions> & Extensions;
@@ -44,6 +45,7 @@ const initOptions: IInitOptions<Extensions> = {
     obj.match = new MatchRepository(obj, pgp);
     obj.matchTeam = new MatchTeamRepository(obj, pgp);
     obj.jackpot = new JackpotRepository(obj, pgp);
+    obj.invoice = new InvoiceRepository(obj, pgp);
   },
   receive: function(data) {
     camelizeColumnNames(data);

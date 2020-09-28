@@ -145,7 +145,7 @@ export class X01Service extends GameService {
     }
 
     const next = await tx.oneOrNone(sql.matchTeam.findNextTeamId, {
-      matchTeamId: active.matchTeamId,
+      order: active.order,
       matchId: active.matchId,
       set: active.set,
       leg: active.leg,
