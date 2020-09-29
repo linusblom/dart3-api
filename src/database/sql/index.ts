@@ -57,6 +57,7 @@ export const matchTeam = {
   findByMatchIdWithOrder: sql('match-team/find-by-match-id-with-order.sql'),
   findResults: sql('match-team/find-results.sql'),
   findWinners: sql('match-team/find-winners.sql'),
+  findByMatchIdAndOrder: sql('match-team/find-by-match-id-and-order.sql'),
   updateGems: sql('match-team/update-gems.sql'),
 };
 

@@ -16,7 +16,7 @@ services:
       - AUTH0_CLIENT_SECRET=
       - AUTH0_URL=
       - AUTH0_AUDIENCE=
-      - JACKPOT_GEM=
+      - JACKPOT_GEM=3/100
     image: dart3-api
     expose:
       - 8080

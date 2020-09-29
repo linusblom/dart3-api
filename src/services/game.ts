@@ -317,12 +317,10 @@ export abstract class GameService {
     });
     await tx.none(`${this.insert(mtlInsertData, mtlInsertCs)}`);
 
-    const first = await tx.one(sql.matchTeam.findFirstTeamId, {
+    const first = await tx.one(sql.matchTeam.findByMatchIdAndOrder, {
       matchId: active.matchId,
-      leg,
-      set,
+      order: leg % legResults.matchTeams.length || legResults.matchTeams.length,
     });
-
     await tx.none(sql.match.nextLeg, { matchTeamId: first.id, leg, set, id: active.matchId });
 
     return this.roundResponse(active, tx);
