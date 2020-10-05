@@ -31,7 +31,15 @@ export class UserController {
 
     await db.jackpot.init(userId);
 
-    await this.service.updateUser(ctx, userId, { userMetadata: { bootstrapped: true } });
+    await this.service.updateUser(ctx, userId, {
+      userMetadata: {
+        bootstrapped: true,
+        currency: 'kr',
+        rake: 0.0,
+        jackpotFee: 0.08,
+        nextJackpotFee: 0.02,
+      },
+    });
 
     return response(ctx, httpStatusCodes.OK);
   }
