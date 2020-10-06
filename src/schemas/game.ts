@@ -6,6 +6,7 @@ export const createGameSchema = Joi.object({
     .valid(GameType.HalveIt, GameType.Legs, GameType.X01)
     .required(),
   tournament: Joi.boolean().required(),
+  random: Joi.boolean().required(),
   team: Joi.boolean().required(),
   legs: Joi.number()
     .allow(1, 3, 5)

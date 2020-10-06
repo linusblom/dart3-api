@@ -54,8 +54,10 @@ export const matchTeam = {
   findFirstTeamId: sql('match-team/find-first-team-id.sql'),
   findNextTeamId: sql('match-team/find-next-team-id.sql'),
   findByMatchIdWithLeg: sql('match-team/find-by-match-id-with-leg.sql'),
+  findByMatchIdWithOrder: sql('match-team/find-by-match-id-with-order.sql'),
   findResults: sql('match-team/find-results.sql'),
   findWinners: sql('match-team/find-winners.sql'),
+  findByMatchIdAndOrder: sql('match-team/find-by-match-id-and-order.sql'),
   updateGems: sql('match-team/update-gems.sql'),
 };
 
@@ -75,6 +77,12 @@ export const player = {
   updatePin: sql('player/update-pin.sql'),
   update: sql('player/update.sql'),
   updateXp: sql('player/update-xp.sql'),
+};
+
+export const invoice = {
+  debit: sql('invoice/debit.sql'),
+  findPaid: sql('invoice/find-paid.sql'),
+  findUnpaid: sql('invoice/find-unpaid.sql'),
 };
 
 export const team = {

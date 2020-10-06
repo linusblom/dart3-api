@@ -1,5 +1,41 @@
 CREATE EXTENSION pgcrypto;
 
+CREATE TYPE transaction_type AS ENUM (
+  'system',
+  'bet',
+  'win',
+  'deposit',
+  'withdrawal',
+  'transfer',
+  'refund'
+);
+
+CREATE TYPE game_type AS ENUM (
+  'halve_it',
+  'legs',
+  'x01'
+);
+
+CREATE TYPE check_type AS ENUM (
+  'straight',
+  'double',
+  'master'
+);
+
+CREATE TYPE match_status AS ENUM (
+  'pending',
+  'order',
+  'playing',
+  'completed'
+);
+
+CREATE TYPE target_type AS ENUM (
+  'inner',
+  'triple',
+  'outer',
+  'double'
+);
+
 CREATE TABLE IF NOT EXISTS player (
   id                    SERIAL,
   user_id               CHAR(30)      NOT NULL,
@@ -14,17 +50,8 @@ CREATE TABLE IF NOT EXISTS player (
   avatar                VARCHAR,
   xp                    INTEGER       DEFAULT 0,
   pro                   BOOLEAN       DEFAULT false,
+  double                SMALLINT      DEFAULT 20,
   PRIMARY KEY (id)
-);
-
-CREATE TYPE transaction_type AS ENUM (
-  'system',
-  'bet',
-  'win',
-  'deposit',
-  'withdrawal',
-  'transfer',
-  'refund'
 );
 
 CREATE TABLE IF NOT EXISTS transaction (
@@ -40,32 +67,21 @@ CREATE TABLE IF NOT EXISTS transaction (
   FOREIGN KEY (player_id) REFERENCES player (id)
 );
 
-CREATE TYPE game_type AS ENUM (
-  'halve_it',
-  'legs',
-  'x01'
-);
-
-CREATE TYPE check_in_out AS ENUM (
-  'straight',
-  'double',
-  'master'
-);
-
 CREATE TABLE IF NOT EXISTS game (
   id                SERIAL,
   user_id           CHAR(30)      NOT NULL,
   uid               CHAR(20)      NOT NULL,
   type              game_type     NOT NULL,
   tournament        BOOLEAN       NOT NULL,
+  random            BOOLEAN       NOT NULL,
   team              BOOLEAN       NOT NULL,
   legs              SMALLINT      NOT NULL,
   sets              SMALLINT      NOT NULL,
   bet               SMALLINT      NOT NULL,
   prize_pool        NUMERIC(10,2) DEFAULT 0,
   start_score       SMALLINT      NOT NULL,
-  check_in          check_in_out  NOT NULL,
-  check_out         check_in_out  NOT NULL,
+  check_in          check_type    NOT NULL,
+  check_out         check_type    NOT NULL,
   tie_break         SMALLINT      NOT NULL,
   created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at        TIMESTAMP,
@@ -94,13 +110,6 @@ CREATE TABLE IF NOT EXISTS team_player (
   FOREIGN KEY (game_id) REFERENCES game (id)
 );
 
-CREATE TYPE match_status AS ENUM (
-  'waiting',
-  'ready',
-  'playing',
-  'completed'
-);
-
 CREATE TABLE IF NOT EXISTS match (
   id                    SERIAL,
   game_id               INTEGER       NOT NULL,
@@ -121,6 +130,7 @@ CREATE TABLE IF NOT EXISTS match_team (
   id            SERIAL,
   match_id      INTEGER   NOT NULL,
   team_id       INTEGER   NOT NULL,
+  "order"       SMALLINT  NOT NULL,
   gems          SMALLINT  DEFAULT 0,
   jackpot_paid  BOOLEAN   DEFAULT false,
   position      SMALLINT,
@@ -157,6 +167,7 @@ CREATE TABLE IF NOT EXISTS hit (
   set             SMALLINT  NOT NULL,
   value           SMALLINT  NOT NULL,
   multiplier      SMALLINT  NOT NULL,
+  target          target_type,
   approved_score  SMALLINT  NOT NULL,
   PRIMARY KEY (id),
   FOREIGN KEY (match_team_id) REFERENCES match_team (id),
@@ -174,6 +185,20 @@ CREATE TABLE IF NOT EXISTS jackpot (
   won_at          TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (match_team_id) REFERENCES match_team (id)
+);
+
+CREATE TABLE IF NOT EXISTS invoice (
+  id          SERIAL,
+  user_id     CHAR(30)        NOT NULL,
+  debit       NUMERIC(10,2)   DEFAULT 0,
+  credit      NUMERIC(10,2)   DEFAULT 0,
+  balance     NUMERIC(10,2)   DEFAULT 0,
+  start_at    DATE            DEFAULT date_trunc('month', CURRENT_DATE)::date,
+  end_at      DATE            DEFAULT (date_trunc('month', CURRENT_DATE) + interval '1 month' - interval '1 day')::date,
+  due_at      DATE            DEFAULT (date_trunc('month', CURRENT_DATE) + interval '2 month' - interval '1 day')::date,
+  paid_at     DATE,
+  PRIMARY KEY (id),
+  UNIQUE(user_id, start_at)
 );
 
 CREATE OR REPLACE VIEW match_active_player_id AS

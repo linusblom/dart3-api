@@ -668,10 +668,10 @@ crypto-random-string@^2.0.0:
   resolved "https://registry.yarnpkg.com/crypto-random-string/-/crypto-random-string-2.0.0.tgz#ef2a7a966ec11083388369baa02ebead229b30d5"
   integrity sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==
 
-dart3-sdk@^0.2.97:
-  version "0.2.97"
-  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.2.97.tgz#94d646a7a86407484ac5aec529f2767c71ff64bd"
-  integrity sha512-0X9640yv8YJI+aeoHiRANbwGwz8UjoLEW5ogNdLTq7cx8b+a8B2R7ZSUrigKNKf/VR9UWmnmdPoGACeDRaBrkA==
+dart3-sdk@^0.3.15:
+  version "0.3.15"
+  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.3.15.tgz#d854638f8ca42dc3d4faaf56f3572757ed5f2344"
+  integrity sha512-3kXlnQczr5nhVguHyMfRXNaxDwPHdsSaDaJ+7Q+wXE30YWxF/77/I7VFU8l+6EiD/Hn7UlrB6S2GWpJ7Bngz5g==
 
 debug@=3.1.0, debug@~3.1.0:
   version "3.1.0"
@@ -1484,10 +1484,10 @@ negotiator@0.6.2:
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.2.tgz#feacf7ccf525a77ae9634436a64883ffeca346fb"
   integrity sha512-hZXc7K2e+PgeI1eDBe/10Ard4ekbfrrqG8Ep+8Jmf4JID2bNg7NvCPOZN+kfF574pFQI7mum2AUqDidoKqcTOw==
 
-node-fetch@^2.6.0:
-  version "2.6.0"
-  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.0.tgz#e633456386d4aa55863f676a7ab0daa8fdecb0fd"
-  integrity sha512-8dG4H5ujfvFiqDmVu9fQ5bOHUC15JMjMY/Zumv26oOvvVJjM67KF8koCWIabKQ1GJIa9r2mMZscBq/TbdOcmNA==
+node-fetch@^2.6.1:
+  version "2.6.1"
+  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
+  integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==
 
 nodemon@^2.0.4:
   version "2.0.4"

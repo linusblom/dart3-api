@@ -1,5 +1,5 @@
-SELECT d.id, d.match_id, d.team_id, d.position, d.gems, d.jackpot_paid, d.score, d.player_ids, s.legs, s.sets FROM (
-  SELECT mt.id, mt.match_id, mt.team_id, mtl.position, mt.gems, mt.jackpot_paid, mtl.score, array_agg(tp.player_id ORDER BY tp.id) as player_ids
+SELECT d.id, d.match_id, d.team_id, d.order, d.position, d.gems, d.jackpot_paid, d.score, d.player_ids, s.legs, s.sets FROM (
+  SELECT mt.id, mt.match_id, mt.team_id, mt.order, mtl.position, mt.gems, mt.jackpot_paid, mtl.score, array_agg(tp.player_id ORDER BY tp.id) as player_ids
   FROM match_team mt
   LEFT JOIN team_player tp ON mt.team_id = tp.team_id
   LEFT JOIN match m ON m.id = mt.match_id
