@@ -36,6 +36,15 @@ CREATE TYPE target_type AS ENUM (
   'double'
 );
 
+CREATE TYPE hit_type AS ENUM (
+  'check_in_straight',
+  'check_in_double',
+  'check_in_master',
+  'check_out_straight',
+  'check_out_double',
+  'check_out_master'
+);
+
 CREATE TABLE IF NOT EXISTS player (
   id                    SERIAL,
   user_id               CHAR(30)      NOT NULL,
@@ -44,6 +53,7 @@ CREATE TABLE IF NOT EXISTS player (
   email                 VARCHAR       NOT NULL,
   balance               NUMERIC(10,2) DEFAULT 0,
   pin                   VARCHAR(60)   NOT NULL,
+  pin_disabled          BOOLEAN       DEFAULT false,
   created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   deleted_at            TIMESTAMP,
   color                 CHAR(7)       DEFAULT '#FFFFFF',
@@ -167,8 +177,9 @@ CREATE TABLE IF NOT EXISTS hit (
   set             SMALLINT  NOT NULL,
   value           SMALLINT  NOT NULL,
   multiplier      SMALLINT  NOT NULL,
+  approved        SMALLINT  NOT NULL,
   target          target_type,
-  approved_score  SMALLINT  NOT NULL,
+  type            hit_type,
   PRIMARY KEY (id),
   FOREIGN KEY (match_team_id) REFERENCES match_team (id),
   FOREIGN KEY (player_id) REFERENCES player (id),

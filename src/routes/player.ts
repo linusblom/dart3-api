@@ -26,28 +26,33 @@ router
     '/:uid/reset-pin',
     async (ctx: Context) => await ctrl.resetPin(ctx, ctx.state.userId, ctx.params.uid),
   )
+  .patch(
+    '/:uid/disable-pin',
+    pin(false),
+    async (ctx: Context) => await ctrl.disablePin(ctx, ctx.state.userId, ctx.params.uid),
+  )
   .delete(
     '/:uid',
-    pin,
+    pin(false),
     async (ctx: Context) => await ctrl.delete(ctx, ctx.state.userId, ctx.params.uid),
   )
   .post(
     '/:uid/deposit',
-    pin,
+    pin(true),
     validate(transactionSchema),
     async (ctx: Context) =>
       await ctrl.deposit(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
   )
   .post(
     '/:uid/withdrawal',
-    pin,
+    pin(true),
     validate(transactionSchema),
     async (ctx: Context) =>
       await ctrl.withdrawal(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
   )
   .post(
     '/:uid/transfer/:receiverUid',
-    pin,
+    pin(true),
     validate(transactionSchema),
     async (ctx: Context) =>
       await ctrl.transfer(

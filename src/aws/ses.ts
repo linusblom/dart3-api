@@ -12,7 +12,7 @@ const ses = new AWS.SES({ apiVersion: '2010-12-01' });
 
 export const sendEmail = async (
   to: string,
-  message: { subject: string; html: string; text: string },
+  message: { subject: string; body: string; text: string },
 ) => {
   const params = {
     Destination: {
@@ -22,7 +22,7 @@ export const sendEmail = async (
       Body: {
         Html: {
           Charset: 'UTF-8',
-          Data: message.html,
+          Data: `<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml"><head><style type="text/css" data-premailer="ignore">body{font-family: Helvetica, Arial, sans-serif !important; font-size: 13px;}</style></head><body>${message.body}</body></html>`,
         },
         Text: {
           Charset: 'UTF-8',
@@ -43,42 +43,18 @@ export const sendEmail = async (
 
 export const generateWelcomeEmail = (name: string, pin: string) => ({
   subject: 'Welcome to Dart3',
-  html: `
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <style type="text/css" data-premailer="ignore">
-      body {
-        font-family: Verdana, Geneva, Tahoma, sans-serif;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Welcome ${name}!</h1>
-    Your PIN code is ${pin}.
-  </body>
-</html>
-`,
+  body: `<h2>Welcome ${name}!</h2>Your PIN code is ${pin}.`,
   text: `Welcome ${name}!\nYour PIN code is ${pin}.`,
 });
 
 export const generateResetPinEmail = (name: string, pin: string) => ({
   subject: 'New PIN code',
-  html: `
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <style type="text/css" data-premailer="ignore">
-      body {
-        font-family: Verdana, Geneva, Tahoma, sans-serif;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Hi ${name}!</h1>
-    Your new PIN code is ${pin}.
-  </body>
-</html>
-`,
+  body: `<h2>Hi ${name}!</h2>Your new PIN code is ${pin}.`,
   text: `Hi ${name}!\nYour new PIN code is ${pin}.`,
+});
+
+export const generateDisablePinEmail = (name: string) => ({
+  subject: 'PIN code disabled',
+  body: `<h2>Hi ${name}!</h2>Your PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.`,
+  text: `Hi ${name}!\nYour PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.`,
 });

@@ -4,7 +4,7 @@ import {
   RoundScore,
   TransactionType,
   MatchStatus,
-  ScoreApproved,
+  HitScore,
   MetaData,
 } from 'dart3-sdk';
 import { IMain, IDatabase } from 'pg-promise';
@@ -79,7 +79,7 @@ export abstract class GameService {
       const teamPlayerData = teamPlayerIds.reduce(
         (acc, ids, index) => [
           ...acc,
-          ...ids.map(id => ({ id, team_id: teamIds[index].id, xp: 10 * this.game.bet })),
+          ...ids.map(id => ({ id, team_id: teamIds[index].id, xp: 100 })),
         ],
         [],
       );
@@ -136,7 +136,7 @@ export abstract class GameService {
     });
   }
 
-  async updateGems(scores: ScoreApproved[], active: MatchActive, tx) {
+  async updateGems(scores: HitScore[], active: MatchActive, tx) {
     if (active.set === 1 && active.leg === 1 && active.round <= 3) {
       const rng = seedrandom();
       const { numerator, denominator } = this.getFractionParts(process.env.JACKPOT_GEM);
@@ -197,7 +197,8 @@ export abstract class GameService {
         value: score.value,
         multiplier: score.multiplier,
         target: score.target,
-        approved_score: score.approvedScore,
+        approved: score.approved,
+        type: score.type,
       }));
       const mtCs = new this.ColumnSet(
         [
@@ -210,7 +211,8 @@ export abstract class GameService {
           'value',
           'multiplier',
           'target',
-          'approved_score',
+          'approved',
+          'type',
         ],
         { table: 'hit' },
       );

@@ -1,0 +1,1 @@
+UPDATE player SET pin_disabled = true WHERE uid = ${uid} AND user_id = ${userId}

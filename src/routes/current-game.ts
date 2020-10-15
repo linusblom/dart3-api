@@ -19,7 +19,7 @@ router
     '/player',
     gameStarted(false),
     validate(createTeamPlayerSchema),
-    pin,
+    pin(true),
     async (ctx: Context) =>
       await ctrl.createTeamPlayer(ctx, ctx.state.service, ctx.state.userId, ctx.request.body),
   )

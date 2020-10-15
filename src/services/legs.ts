@@ -20,7 +20,7 @@ export class LegsService extends GameService {
 
     if (!prevTeam || totalScore > prevTeam.score || totalScore === 180) {
       return {
-        scores: scores.map(s => ({ ...s, approvedScore: this.getDartTotal(s) })),
+        scores: scores.map(s => ({ ...s, approved: this.getDartTotal(s), type: null })),
         nextScore: score,
         xp: totalScore,
       };
@@ -38,7 +38,7 @@ export class LegsService extends GameService {
     }
 
     return {
-      scores: scores.map(s => ({ ...s, approvedScore: 0 })),
+      scores: scores.map(s => ({ ...s, approved: 0, type: null })),
       nextScore,
       xp: totalScore,
     };

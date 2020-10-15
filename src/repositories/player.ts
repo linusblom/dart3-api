@@ -41,6 +41,10 @@ export class PlayerRepository {
     return this.db.none(sql.updatePin, { userId, uid, pin });
   }
 
+  async disablePin(userId: string, uid: string) {
+    return this.db.none(sql.disablePin, { userId, uid });
+  }
+
   async delete(userId: string, uid: string) {
     return this.db.none(sql.delete, { userId, uid });
   }
