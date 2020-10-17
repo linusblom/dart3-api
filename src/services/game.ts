@@ -196,8 +196,9 @@ export abstract class GameService {
         set: active.set,
         value: score.value,
         multiplier: score.multiplier,
-        target: score.target,
         approved: score.approved,
+        bull_distance: score.bullDistance,
+        target: score.target,
         type: score.type,
       }));
       const mtCs = new this.ColumnSet(
@@ -210,8 +211,9 @@ export abstract class GameService {
           'set',
           'value',
           'multiplier',
-          'target',
           'approved',
+          'bull_distance',
+          'target',
           'type',
         ],
         { table: 'hit' },

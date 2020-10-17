@@ -13,7 +13,7 @@
     "@koa/cors": "^3.0.0",
     "aws-sdk": "^2.646.0",
     "bluebird": "^3.7.2",
-    "dart3-sdk": "^0.3.20",
+    "dart3-sdk": "^0.3.21",
     "http-status-codes": "^1.4.0",
     "humps": "^2.0.1",
     "jsonwebtoken": "^8.5.1",

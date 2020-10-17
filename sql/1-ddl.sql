@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS hit (
   value           SMALLINT  NOT NULL,
   multiplier      SMALLINT  NOT NULL,
   approved        SMALLINT  NOT NULL,
+  bull_distance   SMALLINT,
   target          target_type,
   type            hit_type,
   PRIMARY KEY (id),
