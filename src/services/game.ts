@@ -197,7 +197,6 @@ export abstract class GameService {
         value: score.value,
         multiplier: score.multiplier,
         approved: score.approved,
-        bull_distance: score.bullDistance,
         target: score.target,
         type: score.type,
       }));
@@ -212,7 +211,6 @@ export abstract class GameService {
           'value',
           'multiplier',
           'approved',
-          'bull_distance',
           'target',
           'type',
         ],
