@@ -11,7 +11,12 @@ import {
 import md5 from 'md5';
 
 import { randomColor, generatePin, response, errorResponse } from '../utils';
-import { sendEmail, generateResetPinEmail, generateWelcomeEmail } from '../aws';
+import {
+  sendEmail,
+  generateResetPinEmail,
+  generateWelcomeEmail,
+  generateDisablePinEmail,
+} from '../aws';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
 
@@ -67,6 +72,17 @@ export class PlayerController {
       const player = await t.player.findByUid(userId, uid);
 
       await sendEmail(player.email, generateResetPinEmail(player.name, pin));
+
+      return response(ctx, httpStatusCodes.OK);
+    });
+  }
+
+  async disablePin(ctx: Context, userId: string, uid: string) {
+    return db.task(async t => {
+      await t.player.disablePin(userId, uid);
+      const player = await t.player.findByUid(userId, uid);
+
+      await sendEmail(player.email, generateDisablePinEmail(player.name));
 
       return response(ctx, httpStatusCodes.OK);
     });

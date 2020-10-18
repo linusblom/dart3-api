@@ -17,9 +17,7 @@ export const createRoundSchema = Joi.array()
         .min(0)
         .max(3)
         .required(),
-      bullDistance: Joi.number()
-        .min(-1)
-        .required(),
+      bullDistance: Joi.number().min(-1),
       target: Joi.string()
         .valid(Target.Inner, Target.Triple, Target.Outer, Target.Double, null)
         .required(),

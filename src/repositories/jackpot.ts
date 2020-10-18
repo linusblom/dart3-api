@@ -19,7 +19,7 @@ export class JackpotRepository {
       const team = await tx.one(sql.matchTeam.findById, { id: matchTeamId });
       const jackpot = await tx.one(sql.jackpot.findCurrent, { userId });
       const win = jackpot.value / team.playerIds.length;
-      const xp = 20000 / team.playerIds.length;
+      const xp = 10000 / team.playerIds.length;
 
       await Promise.all(
         team.playerIds.map(async playerId => {

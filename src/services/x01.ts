@@ -1,4 +1,4 @@
-import { Score, RoundScore, Check } from 'dart3-sdk';
+import { Score, RoundScore, Check, HitType } from 'dart3-sdk';
 
 import { GameService } from './game';
 import { MatchActive } from '../models';
@@ -16,18 +16,33 @@ export class X01Service extends GameService {
     }
   }
 
+  getHitType(check: Check, out: boolean) {
+    switch (check) {
+      case Check.Master:
+        return out ? HitType.CheckOutMaster : HitType.CheckInMaster;
+      case Check.Double:
+        return out ? HitType.CheckOutDouble : HitType.CheckInDouble;
+      default:
+        return out ? HitType.CheckOutStraight : HitType.CheckInStraight;
+    }
+  }
+
   getApprovedCheckInScore(scores: Score[]) {
     return scores.reduce((acc, score) => {
       const dartTotal = this.getDartTotal(score);
-      let approvedScore = 0;
+      let approved = 0;
+      let type = null;
 
-      if (acc.reduce((t, s) => t + s.approvedScore, 0) > 0) {
-        approvedScore = dartTotal;
-      } else {
-        approvedScore = this.validMultiplier(this.game.checkIn, score.multiplier) ? dartTotal : 0;
+      if (acc.reduce((t, s) => t + s.approved, 0) > 0) {
+        approved = dartTotal;
+      } else if (this.validMultiplier(this.game.checkIn, score.multiplier)) {
+        approved = dartTotal;
+        type = this.getHitType(this.game.checkIn, false);
       }
 
-      return [...acc, { ...score, approvedScore }];
+      console.log(type);
+
+      return [...acc, { ...score, approved, type }];
     }, []);
   }
 
@@ -36,25 +51,27 @@ export class X01Service extends GameService {
 
     return scores.reduce((acc, score, _, array) => {
       if (totalScore === 0) {
-        return [...acc, { ...score, approvedScore: 0 }];
+        return [...acc, { ...score, approved: 0, type: null }];
       }
 
       const dartTotal = this.getDartTotal(score);
-      let approvedScore = 0;
+      let approved = 0;
+      let type = null;
       totalScore -= dartTotal;
 
       if (totalScore > 1) {
-        approvedScore = dartTotal;
-      } else if (totalScore === 0) {
-        approvedScore = this.validMultiplier(this.game.checkOut, score.multiplier) ? dartTotal : 0;
+        approved = dartTotal;
+      } else if (totalScore === 0 && this.validMultiplier(this.game.checkOut, score.multiplier)) {
+        approved = dartTotal;
+        type = this.getHitType(this.game.checkOut, true);
       }
 
-      if (bust || (approvedScore === 0 && dartTotal > 0)) {
+      if (bust || (approved === 0 && dartTotal > 0)) {
         bust = true;
-        return array.map(s => ({ ...s, approvedScore: 0 }));
+        return array.map(s => ({ ...s, approved: 0, type: null }));
       }
 
-      return [...acc, { ...score, approvedScore }];
+      return [...acc, { ...score, approved, type }];
     }, []);
   }
 
@@ -64,27 +81,27 @@ export class X01Service extends GameService {
       id: active.matchTeamLegId,
     });
 
-    let approvedScores = [];
+    let hitScores = [];
     let nextScore = 0;
 
-    if (active.round === this.game.tieBreak) {
-      approvedScores = scores.map(s => ({ ...s, approvedScore: this.getDartTotal(s) }));
+    if (active.round > this.game.tieBreak) {
+      hitScores = scores.map(s => ({ ...s, approved: this.getDartTotal(s), type: null }));
       nextScore = totalScore;
     } else if (score === this.game.startScore) {
-      approvedScores = this.getApprovedCheckInScore(scores);
-      nextScore = score - approvedScores.reduce((t, s) => t + s.approvedScore, 0);
+      hitScores = this.getApprovedCheckInScore(scores);
+      nextScore = score - hitScores.reduce((t, s) => t + s.approved, 0);
     } else {
-      approvedScores = scores.map(s => ({ ...s, approvedScore: this.getDartTotal(s) }));
-      nextScore = score - approvedScores.reduce((t, s) => t + s.approvedScore, 0);
+      hitScores = scores.map(s => ({ ...s, approved: this.getDartTotal(s), type: null }));
+      nextScore = score - hitScores.reduce((t, s) => t + s.approved, 0);
 
       if (nextScore <= 1) {
-        approvedScores = this.getApprovedCheckOutScore(scores, score);
-        nextScore = score - approvedScores.reduce((t, s) => t + s.approvedScore, 0);
+        hitScores = this.getApprovedCheckOutScore(scores, score);
+        nextScore = score - hitScores.reduce((t, s) => t + s.approved, 0);
       }
     }
 
     return {
-      scores: approvedScores,
+      scores: hitScores,
       nextScore,
       xp: totalScore,
     };
@@ -95,7 +112,10 @@ export class X01Service extends GameService {
       matchId: active.matchId,
       set: active.set,
       leg: active.leg,
-      orderBy: `ORDER BY d.score ${active.round === this.game.tieBreak ? 'DESC' : 'ASC'}`,
+      orderBy:
+        active.round > this.game.tieBreak
+          ? 'ORDER BY d.position NULLS FIRST, d.score DESC'
+          : 'ORDER BY d.score',
     });
 
     let endMatch = false;
@@ -135,6 +155,45 @@ export class X01Service extends GameService {
     return { data, matchTeams, endMatch, endSet };
   }
 
+  async checkTieBreak(active: MatchActive, tx) {
+    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
+      matchId: active.matchId,
+      set: active.set,
+      leg: active.leg,
+      orderBy: 'ORDER BY d.position NULLS FIRST, d.score DESC',
+    });
+
+    if (matchTeams[0].score === matchTeams[1].score) {
+      const beatenTeamsData = matchTeams
+        .filter(({ position }) => !position)
+        .map(({ id, score }, index, array) => ({
+          match_team_id: id,
+          set: active.set,
+          leg: active.leg,
+          score: 0,
+          position: score !== array[0].score ? index + 1 : null,
+        }))
+        .filter(({ position }) => !!position);
+
+      if (beatenTeamsData.length) {
+        const beatenTeamsCs = new this.ColumnSet(
+          ['?match_team_id', '?set', '?leg', 'position', 'score'],
+          { table: 'match_team_leg' },
+        );
+        await tx.none(
+          `${this.update(
+            beatenTeamsData,
+            beatenTeamsCs,
+          )} WHERE v.match_team_id = t.match_team_id AND v.set = t.set AND v.leg = t.leg`,
+        );
+      }
+
+      return this.nextRound(active, tx);
+    }
+
+    return this.nextLeg(active, tx);
+  }
+
   async next(active: MatchActive, tx) {
     const { score } = await tx.one(sql.matchTeamLeg.findScoreById, {
       id: active.matchTeamLegId,
@@ -153,8 +212,8 @@ export class X01Service extends GameService {
 
     if (next) {
       return this.nextMatchTeam(next.id, active, tx);
-    } else if (active.round === this.game.tieBreak) {
-      return this.nextLeg(active, tx);
+    } else if (active.round > this.game.tieBreak) {
+      return this.checkTieBreak(active, tx);
     } else {
       return this.nextRound(active, tx);
     }

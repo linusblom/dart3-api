@@ -1,4 +1,4 @@
-import { Score, ScoreApproved } from 'dart3-sdk';
+import { Score, HitScore } from 'dart3-sdk';
 
 import * as sql from '../database/sql';
 import { GameService } from './game';
@@ -8,14 +8,16 @@ export class HalveItService extends GameService {
   private checkValue(scores: Score[], valid: number) {
     return scores.map(score => ({
       ...score,
-      approvedScore: valid === score.value ? this.getDartTotal(score) : 0,
+      approved: valid === score.value ? this.getDartTotal(score) : 0,
+      type: null,
     }));
   }
 
   private checkMultiplier(scores: Score[], valid: number) {
     return scores.map(score => ({
       ...score,
-      approvedScore: valid === score.multiplier ? this.getDartTotal(score) : 0,
+      approved: valid === score.multiplier ? this.getDartTotal(score) : 0,
+      type: null,
     }));
   }
 
@@ -25,11 +27,12 @@ export class HalveItService extends GameService {
 
     return scores.map(score => ({
       ...score,
-      approvedScore: totalValid ? this.getDartTotal(score) : 0,
+      approved: totalValid ? this.getDartTotal(score) : 0,
+      type: null,
     }));
   }
 
-  private getApprovedScore(scores: Score[], round: number) {
+  private getHitScore(scores: Score[], round: number) {
     switch (round) {
       case 1:
         return this.checkValue(scores, 19);
@@ -48,23 +51,23 @@ export class HalveItService extends GameService {
       case 8:
         return this.checkValue(scores, 25);
       default:
-        return scores.map(score => ({ ...score, approvedScore: 0 }));
+        return scores.map(score => ({ ...score, approved: 0, type: null }));
     }
   }
 
-  private getNextScore(approvedScores: ScoreApproved[], currentTotal: number) {
-    const total = approvedScores.reduce((acc, { approvedScore }) => acc + approvedScore, 0);
+  private getNextScore(scores: HitScore[], currentTotal: number) {
+    const total = scores.reduce((acc, { approved }) => acc + approved, 0);
 
     return total > 0 ? currentTotal + total : Math.ceil(currentTotal / 2);
   }
 
   async getRoundScore(scores: Score[], active: MatchActive, tx) {
     const { score } = await tx.one(sql.matchTeamLeg.findScoreById, { id: active.matchTeamLegId });
-    const approvedScores = this.getApprovedScore(scores, active.round);
-    const nextScore = this.getNextScore(approvedScores, score);
+    const hitScore = this.getHitScore(scores, active.round);
+    const nextScore = this.getNextScore(hitScore, score);
 
     return {
-      scores: approvedScores,
+      scores: hitScore,
       nextScore,
       xp: this.getRoundTotal(scores),
     };
