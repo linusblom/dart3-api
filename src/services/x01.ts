@@ -40,8 +40,6 @@ export class X01Service extends GameService {
         type = this.getHitType(this.game.checkIn, false);
       }
 
-      console.log(type);
-
       return [...acc, { ...score, approved, type }];
     }, []);
   }

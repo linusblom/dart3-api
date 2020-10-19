@@ -186,6 +186,8 @@ CREATE TABLE IF NOT EXISTS hit (
   UNIQUE(match_team_id, dart, round, leg, set)
 );
 
+CREATE INDEX hit_player_id ON hit (player_id);
+
 CREATE TABLE IF NOT EXISTS jackpot (
   id              SERIAL,
   user_id         CHAR(30)      NOT NULL,
