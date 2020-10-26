@@ -1,17 +1,16 @@
-import {
-  Game,
-  Score,
-  RoundScore,
-  TransactionType,
-  MatchStatus,
-  HitScore,
-  MetaData,
-} from 'dart3-sdk';
+import { Game, Score, TransactionType, MatchStatus, HitScore, MetaData } from 'dart3-sdk';
 import { IMain, IDatabase } from 'pg-promise';
 import seedrandom from 'seedrandom';
 
 import * as sql from '../database/sql';
-import { LegResults, MatchActive, RoundResults, TeamPlayerPro } from '../models';
+import {
+  LegResults,
+  MatchActive,
+  NextMatchTeam,
+  RoundResults,
+  RoundScore,
+  TeamPlayerPro,
+} from '../models';
 
 export abstract class GameService {
   ColumnSet = this.pgp.helpers.ColumnSet;
@@ -23,7 +22,12 @@ export abstract class GameService {
 
   abstract getRoundScore(scores: Score[], active: MatchActive, tx): Promise<RoundScore>;
   abstract getLegResults(active: MatchActive, tx): Promise<LegResults>;
-  abstract next(active: MatchActive, tx): Promise<RoundResults>;
+  abstract next(
+    nextTeam: NextMatchTeam,
+    nextRound: boolean,
+    active: MatchActive,
+    tx,
+  ): Promise<RoundResults>;
 
   protected getDartTotal(score: Score) {
     return score.value * score.multiplier;
@@ -34,7 +38,8 @@ export abstract class GameService {
   }
 
   private randomizeOrder(players: TeamPlayerPro[]) {
-    const arrayRandomizer = () => Math.random() - 0.5;
+    const rng = seedrandom();
+    const arrayRandomizer = () => rng() - 0.5;
 
     if (!this.game.team) {
       return players.map(({ id }) => [id]).sort(arrayRandomizer);
@@ -175,6 +180,32 @@ export abstract class GameService {
     return this.roundResponse(active, tx);
   }
 
+  async checkNext(active: MatchActive, tx) {
+    const nextOrder = await tx.any(sql.matchTeam.findNextOrder, {
+      order: active.order,
+      matchId: active.matchId,
+      set: active.set,
+      leg: active.leg,
+    });
+
+    return nextOrder.reduce(
+      (acc, team) => {
+        if (acc.nextTeam) {
+          return acc;
+        }
+
+        let nextRound = acc.nextRound;
+
+        if (team.order === active.startOrder) {
+          nextRound = true;
+        }
+
+        return { nextTeam: !team.position ? team : null, nextRound };
+      },
+      { nextTeam: null, nextRound: false },
+    );
+  }
+
   async createRound(scores: Score[]) {
     return this.db.tx(async tx => {
       const active = await tx.one(sql.match.findActiveByGameId, { gameId: this.game.id });
@@ -219,7 +250,7 @@ export abstract class GameService {
       await tx.none(this.insert(mtData, mtCs));
 
       await tx.none(sql.teamPlayer.updateXp, {
-        xp: roundScore.xp,
+        xp: roundScore.totalScore,
         teamId: active.teamId,
         playerId: active.playerId,
       });
@@ -229,25 +260,25 @@ export abstract class GameService {
         set: active.set,
         leg: active.leg,
       });
+      await tx.none(sql.match.updateActiveScore, {
+        id: active.matchId,
+        score: roundScore.totalScore,
+      });
 
-      return this.next(active, tx);
+      const { nextTeam, nextRound } = await this.checkNext(active, tx);
+
+      return this.next(nextTeam, nextRound, active, tx);
     });
   }
 
-  protected async nextMatchTeam(matchTeamId: number, active: MatchActive, tx) {
-    await tx.none(sql.match.nextMatchTeam, { matchTeamId, id: active.matchId });
+  protected async nextMatchTeam(nextTeam: NextMatchTeam, active: MatchActive, tx) {
+    await tx.none(sql.match.nextMatchTeam, { matchTeamId: nextTeam.id, id: active.matchId });
 
     return this.roundResponse(active, tx);
   }
 
-  async nextRound(active: MatchActive, tx) {
-    const first = await tx.one(sql.matchTeam.findFirstTeamId, {
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-    });
-
-    await tx.none(sql.match.nextRound, { matchTeamId: first.id, id: active.matchId });
+  async nextRound(nextTeam: NextMatchTeam, active: MatchActive, tx) {
+    await tx.none(sql.match.nextRound, { matchTeamId: nextTeam.id, id: active.matchId });
 
     return this.roundResponse(active, tx);
   }
@@ -319,11 +350,20 @@ export abstract class GameService {
     });
     await tx.none(`${this.insert(mtlInsertData, mtlInsertCs)}`);
 
+    const startOrder =
+      active.startOrder + 1 > legResults.matchTeams.length ? 1 : active.startOrder + 1;
+
     const first = await tx.one(sql.matchTeam.findByMatchIdAndOrder, {
       matchId: active.matchId,
-      order: leg % legResults.matchTeams.length || legResults.matchTeams.length,
+      order: startOrder,
     });
-    await tx.none(sql.match.nextLeg, { matchTeamId: first.id, leg, set, id: active.matchId });
+    await tx.none(sql.match.nextLeg, {
+      matchTeamId: first.id,
+      leg,
+      set,
+      id: active.matchId,
+      startOrder,
+    });
 
     return this.roundResponse(active, tx);
   }
