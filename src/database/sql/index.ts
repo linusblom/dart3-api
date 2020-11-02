@@ -23,7 +23,6 @@ export const game = {
 };
 
 export const hit = {
-  findByPreviousMatchTeam: sql('hit/find-by-previous-match-team.sql'),
   findRoundHitsBySetLegRoundAndMatchId: sql(
     'hit/find-round-hits-by-set-leg-round-and-match-id.sql',
   ),
@@ -46,13 +45,13 @@ export const match = {
   nextMatchTeam: sql('match/next-match-team.sql'),
   nextRound: sql('match/next-round.sql'),
   start: sql('match/start.sql'),
+  updateActiveScore: sql('match/update-active-score.sql'),
 };
 
 export const matchTeam = {
   findByGameIdWithLeg: sql('match-team/find-by-game-id-with-leg.sql'),
   findById: sql('match-team/find-by-id.sql'),
-  findFirstTeamId: sql('match-team/find-first-team-id.sql'),
-  findNextTeamId: sql('match-team/find-next-team-id.sql'),
+  findNextOrder: sql('match-team/find-next-order.sql'),
   findByMatchIdWithLeg: sql('match-team/find-by-match-id-with-leg.sql'),
   findByMatchIdWithOrder: sql('match-team/find-by-match-id-with-order.sql'),
   findResults: sql('match-team/find-results.sql'),

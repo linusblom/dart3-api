@@ -1,7 +1,7 @@
 import { Score } from 'dart3-sdk';
 
 import { GameService } from './game';
-import { MatchActive, RoundResults } from '../models';
+import { MatchActive, NextMatchTeam, RoundResults } from '../models';
 import * as sql from '../database/sql';
 
 export class LegsService extends GameService {
@@ -10,19 +10,12 @@ export class LegsService extends GameService {
     const { score } = await tx.one(sql.matchTeamLeg.findScoreById, {
       id: active.matchTeamLegId,
     });
-    const prevTeam = await tx.oneOrNone(sql.hit.findByPreviousMatchTeam, {
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-      round: active.round,
-      order: active.order,
-    });
 
-    if (!prevTeam || totalScore > prevTeam.score || totalScore === 180) {
+    if (totalScore > active.score || totalScore === 180) {
       return {
+        totalScore,
         scores: scores.map(s => ({ ...s, approved: this.getDartTotal(s), type: null })),
         nextScore: score,
-        xp: totalScore,
       };
     }
 
@@ -38,9 +31,9 @@ export class LegsService extends GameService {
     }
 
     return {
+      totalScore,
       scores: scores.map(s => ({ ...s, approved: 0, type: null })),
       nextScore,
-      xp: totalScore,
     };
   }
 
@@ -87,7 +80,12 @@ export class LegsService extends GameService {
     return { data, matchTeams, endMatch, endSet };
   }
 
-  async next(active: MatchActive, tx): Promise<RoundResults> {
+  async next(
+    nextTeam: NextMatchTeam,
+    nextRound: boolean,
+    active: MatchActive,
+    tx,
+  ): Promise<RoundResults> {
     const { teamsLeft } = await tx.one(sql.matchTeamLeg.findTeamsLeftCount, {
       matchId: active.matchId,
       set: active.set,
@@ -98,17 +96,10 @@ export class LegsService extends GameService {
       return this.nextLeg(active, tx);
     }
 
-    const next = await tx.oneOrNone(sql.matchTeam.findNextTeamId, {
-      order: active.order,
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-    });
-
-    if (next) {
-      return this.nextMatchTeam(next.id, active, tx);
-    } else {
-      return this.nextRound(active, tx);
+    if (nextRound) {
+      return this.nextRound(nextTeam, active, tx);
     }
+
+    return this.nextMatchTeam(nextTeam, active, tx);
   }
 }

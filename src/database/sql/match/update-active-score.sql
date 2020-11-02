@@ -1,0 +1,1 @@
+UPDATE match SET active_score = ${score} WHERE id = ${id}

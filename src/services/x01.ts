@@ -1,7 +1,7 @@
-import { Score, RoundScore, Check, HitType } from 'dart3-sdk';
+import { Score, Check, HitType } from 'dart3-sdk';
 
 import { GameService } from './game';
-import { MatchActive } from '../models';
+import { MatchActive, NextMatchTeam } from '../models';
 import * as sql from '../database/sql';
 
 export class X01Service extends GameService {
@@ -73,7 +73,7 @@ export class X01Service extends GameService {
     }, []);
   }
 
-  async getRoundScore(scores: Score[], active: MatchActive, tx): Promise<RoundScore> {
+  async getRoundScore(scores: Score[], active: MatchActive, tx) {
     const totalScore = this.getRoundTotal(scores);
     const { score } = await tx.one(sql.matchTeamLeg.findScoreById, {
       id: active.matchTeamLegId,
@@ -83,7 +83,11 @@ export class X01Service extends GameService {
     let nextScore = 0;
 
     if (active.round > this.game.tieBreak) {
-      hitScores = scores.map(s => ({ ...s, approved: this.getDartTotal(s), type: null }));
+      hitScores = scores.map(s => ({
+        ...s,
+        approved: this.getDartTotal(s),
+        type: HitType.TieBreak,
+      }));
       nextScore = totalScore;
     } else if (score === this.game.startScore) {
       hitScores = this.getApprovedCheckInScore(scores);
@@ -99,9 +103,9 @@ export class X01Service extends GameService {
     }
 
     return {
+      totalScore,
       scores: hitScores,
       nextScore,
-      xp: totalScore,
     };
   }
 
@@ -153,7 +157,7 @@ export class X01Service extends GameService {
     return { data, matchTeams, endMatch, endSet };
   }
 
-  async checkTieBreak(active: MatchActive, tx) {
+  async checkTieBreak(nextTeam: NextMatchTeam, active: MatchActive, tx) {
     const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
       matchId: active.matchId,
       set: active.set,
@@ -186,13 +190,18 @@ export class X01Service extends GameService {
         );
       }
 
-      return this.nextRound(active, tx);
+      await tx.none(sql.match.updateActiveScore, {
+        id: active.matchId,
+        score: 0,
+      });
+
+      return this.nextRound(nextTeam, active, tx);
     }
 
     return this.nextLeg(active, tx);
   }
 
-  async next(active: MatchActive, tx) {
+  async next(nextTeam: NextMatchTeam, nextRound: boolean, active: MatchActive, tx) {
     const { score } = await tx.one(sql.matchTeamLeg.findScoreById, {
       id: active.matchTeamLegId,
     });
@@ -201,19 +210,14 @@ export class X01Service extends GameService {
       return this.nextLeg(active, tx);
     }
 
-    const next = await tx.oneOrNone(sql.matchTeam.findNextTeamId, {
-      order: active.order,
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-    });
-
-    if (next) {
-      return this.nextMatchTeam(next.id, active, tx);
-    } else if (active.round > this.game.tieBreak) {
-      return this.checkTieBreak(active, tx);
-    } else {
-      return this.nextRound(active, tx);
+    if (!nextRound) {
+      return this.nextMatchTeam(nextTeam, active, tx);
     }
+
+    if (active.round > this.game.tieBreak) {
+      return this.checkTieBreak(nextTeam, active, tx);
+    }
+
+    return this.nextRound(nextTeam, active, tx);
   }
 }
