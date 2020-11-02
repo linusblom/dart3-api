@@ -2,7 +2,7 @@ import { Score, HitScore } from 'dart3-sdk';
 
 import * as sql from '../database/sql';
 import { GameService } from './game';
-import { MatchActive } from '../models';
+import { MatchActive, NextMatchTeam } from '../models';
 
 export class HalveItService extends GameService {
   private checkValue(scores: Score[], valid: number) {
@@ -67,9 +67,9 @@ export class HalveItService extends GameService {
     const nextScore = this.getNextScore(hitScore, score);
 
     return {
+      totalScore: this.getRoundTotal(scores),
       scores: hitScore,
       nextScore,
-      xp: this.getRoundTotal(scores),
     };
   }
 
@@ -123,20 +123,15 @@ export class HalveItService extends GameService {
     return { data, matchTeams, endMatch, endSet };
   }
 
-  async next(active: MatchActive, tx) {
-    const next = await tx.oneOrNone(sql.matchTeam.findNextTeamId, {
-      order: active.order,
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-    });
-
-    if (next) {
-      return this.nextMatchTeam(next.id, active, tx);
-    } else if (active.round === 8) {
+  async next(nextTeam: NextMatchTeam, nextRound: boolean, active: MatchActive, tx) {
+    if (nextRound && active.round === 8) {
       return this.nextLeg(active, tx);
-    } else {
-      return this.nextRound(active, tx);
     }
+
+    if (nextRound) {
+      return this.nextRound(nextTeam, active, tx);
+    }
+
+    return this.nextMatchTeam(nextTeam, active, tx);
   }
 }

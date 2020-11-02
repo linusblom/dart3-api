@@ -42,7 +42,8 @@ CREATE TYPE hit_type AS ENUM (
   'check_in_master',
   'check_out_straight',
   'check_out_double',
-  'check_out_master'
+  'check_out_master',
+  'tie_break'
 );
 
 CREATE TABLE IF NOT EXISTS player (
@@ -127,7 +128,9 @@ CREATE TABLE IF NOT EXISTS match (
   active_set            SMALLINT      DEFAULT 1,
   active_leg            SMALLINT      DEFAULT 1,
   active_round          SMALLINT      DEFAULT 1,
+  active_start_order    SMALLINT      DEFAULT 1,  
   active_match_team_id  INTEGER,
+  active_score          SMALLINT      DEFAULT 0,
   stage                 SMALLINT      NOT NULL,
   created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at            TIMESTAMP,
@@ -215,7 +218,7 @@ CREATE TABLE IF NOT EXISTS invoice (
 );
 
 CREATE OR REPLACE VIEW match_active_player_id AS
-SELECT m.id, m.game_id, m.status, m.active_round, m.active_set, m.active_leg, m.active_match_team_id, m.stage, m.created_at, m.started_at, m.ended_at, tp.player_id as active_player_id
+SELECT m.id, m.game_id, m.status, m.active_round, m.active_set, m.active_leg, m.active_match_team_id, m.stage, m.created_at, m.started_at, m.ended_at, tp.player_id as active_player_id, m.active_start_order, m.active_score
 FROM match m
 LEFT JOIN match_team mt ON m.active_match_team_id = mt.id
 LEFT JOIN team_player tp ON tp.team_id = mt.team_id AND tp.player_id = (
