@@ -10,6 +10,10 @@ export class LegsService extends GameService {
     const { score } = await tx.one(sql.matchTeamLeg.findScoreById, {
       id: active.matchTeamLegId,
     });
+    await tx.none(sql.match.updateActiveScore, {
+      id: active.matchId,
+      score: totalScore,
+    });
 
     if (totalScore > active.score || totalScore === 180) {
       return {

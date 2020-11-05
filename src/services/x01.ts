@@ -190,11 +190,6 @@ export class X01Service extends GameService {
         );
       }
 
-      await tx.none(sql.match.updateActiveScore, {
-        id: active.matchId,
-        score: 0,
-      });
-
       return this.nextRound(nextTeam, active, tx);
     }
 

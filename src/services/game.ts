@@ -260,10 +260,6 @@ export abstract class GameService {
         set: active.set,
         leg: active.leg,
       });
-      await tx.none(sql.match.updateActiveScore, {
-        id: active.matchId,
-        score: roundScore.totalScore,
-      });
 
       const { nextTeam, nextRound } = await this.checkNext(active, tx);
 

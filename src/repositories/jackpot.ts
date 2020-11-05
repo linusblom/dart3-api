@@ -21,7 +21,7 @@ export class JackpotRepository {
       const win = jackpot.value / team.playerIds.length;
       const xp = 10000 / team.playerIds.length;
 
-      await Promise.all(
+      const winnersData = await Promise.all(
         team.playerIds.map(async playerId => {
           await tx.one(sql.transaction.credit, {
             playerId,
@@ -35,15 +35,21 @@ export class JackpotRepository {
             [win, xp, playerId, gameId],
           );
 
-          return Promise.resolve();
+          return {
+            jackpot_id: jackpot.id,
+            player_id: playerId,
+            match_id: team.matchId,
+          };
         }),
       );
 
+      const winnerCs = new this.pgp.helpers.ColumnSet(['jackpot_id', 'player_id', 'match_id'], {
+        table: 'jackpot_winner',
+      });
+      await tx.none(this.pgp.helpers.insert(winnersData, winnerCs));
+
       await tx.none('UPDATE match_team SET jackpot_paid = true WHERE id = $1', [team.id]);
-      await tx.none(
-        'UPDATE jackpot SET match_team_id = $1, won_at = current_timestamp WHERE id = $2',
-        [team.id, jackpot.id],
-      );
+      await tx.none('UPDATE jackpot SET won_at = current_timestamp WHERE id = $1', [jackpot.id]);
       await tx.none('INSERT INTO jackpot (user_id, value) VALUES ($1, $2)', [
         userId,
         jackpot.nextValue,
