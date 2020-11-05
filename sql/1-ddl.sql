@@ -194,13 +194,21 @@ CREATE INDEX hit_player_id ON hit (player_id);
 CREATE TABLE IF NOT EXISTS jackpot (
   id              SERIAL,
   user_id         CHAR(30)      NOT NULL,
-  match_team_id   INTEGER,
   value           NUMERIC(10,2) DEFAULT 0,
   next_value      NUMERIC(10,2) DEFAULT 0,
   started_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   won_at          TIMESTAMP,
-  PRIMARY KEY (id),
-  FOREIGN KEY (match_team_id) REFERENCES match_team (id)
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS jackpot_winner (
+  jackpot_id  INTEGER,
+  player_id   INTEGER,
+  match_id    INTEGER   NOT NULL,
+  PRIMARY KEY (player_id, jackpot_id),
+  FOREIGN KEY (jackpot_id) REFERENCES jackpot (id),
+  FOREIGN KEY (player_id) REFERENCES player (id),
+  FOREIGN KEY (match_id) REFERENCES match (id)
 );
 
 CREATE TABLE IF NOT EXISTS invoice (
