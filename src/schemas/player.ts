@@ -19,4 +19,7 @@ export const updatePlayerSchema = Joi.object({
     .max(25)
     .not(21, 22, 23, 24)
     .required(),
+  avatar: Joi.string()
+    .regex(/^(https?:\/\/[^\s/$.?#].[^\s]*|gravatar)$/)
+    .required(),
 });

@@ -14,6 +14,10 @@ export class JackpotRepository {
     return this.db.one(sql.jackpot.findCurrent, { userId });
   }
 
+  increaseByValues(userId: string, value: number, nextValue: number) {
+    return this.db.none(sql.jackpot.increaseByValues, { userId, value, nextValue });
+  }
+
   winner(userId: string, gameId: number, matchTeamId: number) {
     return this.db.tx(async tx => {
       const team = await tx.one(sql.matchTeam.findById, { id: matchTeamId });

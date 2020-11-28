@@ -1,5 +1,5 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { CreateGame, Game, DbId, MatchStatus } from 'dart3-sdk';
+import { CreateGame, Game } from 'dart3-sdk';
 import { nanoid } from 'nanoid';
 
 import { game as sql } from '../database/sql';
