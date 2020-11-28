@@ -1,13 +1,6 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import {
-  CreatePlayer,
-  UpdatePlayer,
-  CreateTransaction,
-  Player,
-  Transaction,
-  DbId,
-} from 'dart3-sdk';
+import { CreatePlayer, UpdatePlayer, CreateTransaction, GRAVATAR } from 'dart3-sdk';
 import md5 from 'md5';
 
 import { randomColor, generatePin, response, errorResponse } from '../utils';
@@ -19,8 +12,11 @@ import {
 } from '../aws';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
+import { Auth0Service } from '../services';
 
 export class PlayerController {
+  constructor(private auth0 = Auth0Service.getInstance()) {}
+
   async get(ctx: Context, userId: string) {
     const players = await db.player.all(userId);
 
@@ -32,8 +28,9 @@ export class PlayerController {
       return db.task(async t => {
         const player = await t.player.findByUid(userId, uid);
         const transactions = await t.transaction.findByPlayerId(player.id);
+        const statistics = await t.player.findStatisticsById(player.id);
 
-        return response(ctx, httpStatusCodes.OK, { ...player, transactions });
+        return response(ctx, httpStatusCodes.OK, { ...player, transactions, statistics });
       });
     } catch (err) {
       return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
@@ -57,7 +54,14 @@ export class PlayerController {
 
   async update(ctx: Context, userId: string, uid: string, body: UpdatePlayer) {
     return db.task(async t => {
-      await t.player.update(userId, uid, body);
+      let avatar = body.avatar;
+
+      if (avatar === GRAVATAR) {
+        const player = await t.player.findByUid(userId, uid);
+        avatar = `https://s.gravatar.com/avatar/${md5(player.email)}?d=identicon`;
+      }
+
+      await t.player.update(userId, uid, { ...body, avatar });
       const player = await t.player.findByUid(userId, uid);
 
       return response(ctx, httpStatusCodes.OK, player);
@@ -73,6 +77,8 @@ export class PlayerController {
 
       await sendEmail(player.email, generateResetPinEmail(player.name, pin));
 
+      ctx.logger.info({ uid: player.uid }, 'Reset PIN');
+
       return response(ctx, httpStatusCodes.OK);
     });
   }
@@ -84,20 +90,34 @@ export class PlayerController {
 
       await sendEmail(player.email, generateDisablePinEmail(player.name));
 
+      ctx.logger.info({ uid: player.uid }, 'Disable PIN');
+
       return response(ctx, httpStatusCodes.OK);
     });
   }
 
   async delete(ctx: Context, userId: string, uid: string) {
-    await db.player.delete(userId, uid);
+    return db.tx(async t => {
+      const metaData = await this.auth0.getUserMetaData(ctx, userId);
+      const { id } = await t.player.delete(userId, uid);
+      const { balance } = await t.transaction.deletePlayer(id);
+      const value = balance * metaData.jackpotFee;
+      const nextValue = balance * metaData.nextJackpotFee;
 
-    return response(ctx, httpStatusCodes.OK);
+      await t.jackpot.increaseByValues(userId, value, nextValue);
+
+      ctx.logger.info({ uid, balance, jackpot: { value, nextValue } }, 'Player deleted');
+
+      return response(ctx, httpStatusCodes.OK);
+    });
   }
 
   async deposit(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
     return db.task(async t => {
       const player = await t.player.findIdByUid(userId, uid);
       const transaction = await t.transaction.deposit(player.id, body);
+
+      ctx.logger.info({ to: uid, ...body }, 'Deposit');
 
       return response(ctx, httpStatusCodes.OK, transaction);
     });
@@ -108,6 +128,8 @@ export class PlayerController {
       return db.task(async t => {
         const player = await t.player.findIdByUid(userId, uid);
         const transaction = await t.transaction.withdrawal(player.id, body);
+
+        ctx.logger.info({ from: uid, ...body }, 'Withdrawal');
 
         return response(ctx, httpStatusCodes.OK, transaction);
       });
@@ -129,6 +151,8 @@ export class PlayerController {
   ) {
     try {
       const transaction = await db.transaction.transfer(userId, uid, receiverUid, body);
+
+      ctx.logger.info({ from: uid, to: receiverUid, ...body }, 'Transfer');
 
       return response(ctx, httpStatusCodes.OK, transaction);
     } catch (err) {

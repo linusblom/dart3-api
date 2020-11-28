@@ -14,6 +14,10 @@ export class TransactionRepository {
     return this.db.any<Transaction>(sql.findByPlayerId, { playerId, limit });
   }
 
+  async deletePlayer(playerId: number) {
+    return this.db.one<{ balance: number }>(sql.deletePlayer, { playerId });
+  }
+
   async deposit(playerId: number, transaction: CreateTransaction) {
     return this.db.one<Transaction>(sql.credit, {
       playerId,

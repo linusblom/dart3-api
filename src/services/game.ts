@@ -127,7 +127,7 @@ export abstract class GameService {
         id: matchIds[0].id,
         status: this.game.random ? MatchStatus.Playing : MatchStatus.Order,
       });
-      await tx.none(sql.jackpot.increase, {
+      await tx.none(sql.jackpot.increaseByGameId, {
         gameId,
         fee: jackpotFee,
         nextFee: nextJackpotFee,

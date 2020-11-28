@@ -31,7 +31,8 @@ export const hit = {
 
 export const jackpot = {
   findCurrent: sql('jackpot/find-current.sql'),
-  increase: sql('jackpot/increase.sql'),
+  increaseByGameId: sql('jackpot/increase-by-game-id.sql'),
+  increaseByValues: sql('jackpot/increase-by-values.sql'),
 };
 
 export const match = {
@@ -75,6 +76,7 @@ export const player = {
   findByUid: sql('player/find-by-uid.sql'),
   findIdByPin: sql('player/find-id-by-pin.sql'),
   findIdByUid: sql('player/find-id-by-uid.sql'),
+  findStatisticsById: sql('player/find-statistics-by-id.sql'),
   updatePin: sql('player/update-pin.sql'),
   update: sql('player/update.sql'),
   updateXp: sql('player/update-xp.sql'),
@@ -104,6 +106,7 @@ export const teamPlayer = {
 export const transaction = {
   credit: sql('transaction/credit.sql'),
   debit: sql('transaction/debit.sql'),
+  deletePlayer: sql('transaction/delete-player.sql'),
   findBankByUserId: sql('transaction/find-bank-by-user-id.sql'),
   findByPlayerId: sql('transaction/find-by-player-id.sql'),
 };

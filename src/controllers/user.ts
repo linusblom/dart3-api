@@ -5,6 +5,7 @@ import { User } from 'dart3-sdk';
 import { Auth0Service } from '../services';
 import { response, errorResponse } from '../utils';
 import { db } from '../database';
+import { uploadFile } from '../aws';
 
 export class UserController {
   constructor(private service = Auth0Service.getInstance()) {}
@@ -42,5 +43,19 @@ export class UserController {
     });
 
     return response(ctx, httpStatusCodes.OK);
+  }
+
+  async upload(ctx: Context, userId: string, file: any) {
+    if (!/image\/(gif|jpeg|png)/.test(file.mimetype)) {
+      return errorResponse(ctx, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    try {
+      const url = await uploadFile(userId, file);
+
+      return response(ctx, httpStatusCodes.OK, { url });
+    } catch (error) {
+      return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, error);
+    }
   }
 }

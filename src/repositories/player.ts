@@ -46,6 +46,10 @@ export class PlayerRepository {
   }
 
   async delete(userId: string, uid: string) {
-    return this.db.none(sql.delete, { userId, uid });
+    return this.db.one<DbId>(sql.delete, { userId, uid });
+  }
+
+  async findStatisticsById(playerId: number) {
+    return this.db.one(sql.findStatisticsById, { playerId });
   }
 }
