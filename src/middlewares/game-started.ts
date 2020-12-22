@@ -1,9 +1,8 @@
-import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 
 import { errorResponse } from '../utils';
 
-export const gameStarted = (started: boolean) => async (ctx: Context, next: Function) => {
+export const gameStarted = (started: boolean) => async (ctx, next) => {
   if (
     ctx.state.service &&
     ctx.state.service.game &&

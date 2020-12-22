@@ -1,11 +1,10 @@
 import httpStatusCodes from 'http-status-codes';
-import { Context } from 'koa';
 
 import { errorResponse } from '../utils';
 import { db } from '../database';
 import { player as sql } from '../database/sql';
 
-export const admin = async (ctx: Context, next: Function) => {
+export const admin = async (ctx, next) => {
   const pin = ctx.get('x-pin');
 
   if (!/^[0-9]{4}$/.test(pin)) {

@@ -1,5 +1,4 @@
 import httpStatusCodes from 'http-status-codes';
-import { Context } from 'koa';
 import { Game, GameType } from 'dart3-sdk';
 
 import { errorResponse } from '../utils';
@@ -18,7 +17,7 @@ const getGameService = (game: Game): GameService => {
   }
 };
 
-export const gameService = async (ctx: Context, next: Function) => {
+export const gameService = async (ctx, next) => {
   let game: Game;
 
   try {

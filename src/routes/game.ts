@@ -1,4 +1,3 @@
-import { Context } from 'koa';
 import Router from 'koa-router';
 
 import { validate, gameService } from '../middlewares';
@@ -14,8 +13,8 @@ router
   .post(
     '/',
     validate(createGameSchema),
-    async (ctx: Context) => await ctrl.create(ctx, ctx.state.userId, ctx.request.body),
+    async (ctx) => await ctrl.create(ctx, ctx.state.userId, ctx.request.body),
   )
-  .get('/:uid', async (ctx: Context) => await ctrl.getByUid(ctx, ctx.state.userId, ctx.params.uid));
+  .get('/:uid', async (ctx) => await ctrl.getByUid(ctx, ctx.state.userId, ctx.params.uid));
 
 export default router;

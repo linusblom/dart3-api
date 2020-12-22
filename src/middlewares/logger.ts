@@ -1,7 +1,6 @@
-import { Context } from 'koa';
 import pino from 'pino';
 
-export const logger = (ctx: Context, next: Function) => {
+export const logger = (ctx, next) => {
   ctx.logger = pino();
 
   return next();

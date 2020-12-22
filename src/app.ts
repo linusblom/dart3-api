@@ -14,7 +14,7 @@ const app = new Koa();
 app
   .use(cors({ origin: '*', credentials: true }))
   .use((ctx, next) =>
-    next().catch(err => {
+    next().catch((err) => {
       if (err.status === 401) {
         ctx.status = 401;
         ctx.body = 'Unauthorized';

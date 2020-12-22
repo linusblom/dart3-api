@@ -1,6 +1,4 @@
-import { Context } from 'koa';
-
-export const error = async (ctx: Context, next: Function) => {
+export const error = async (ctx, next) => {
   try {
     await next();
   } catch (err) {
