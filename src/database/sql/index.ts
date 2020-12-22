@@ -74,6 +74,7 @@ export const player = {
   delete: sql('player/delete.sql'),
   disablePin: sql('player/disable-pin.sql'),
   findByUid: sql('player/find-by-uid.sql'),
+  findIdByAdmin: sql('player/find-id-by-admin.sql'),
   findIdByPin: sql('player/find-id-by-pin.sql'),
   findIdByUid: sql('player/find-id-by-uid.sql'),
   findStatisticsById: sql('player/find-statistics-by-id.sql'),
@@ -109,4 +110,9 @@ export const transaction = {
   deletePlayer: sql('transaction/delete-player.sql'),
   findBankByUserId: sql('transaction/find-bank-by-user-id.sql'),
   findByPlayerId: sql('transaction/find-by-player-id.sql'),
+};
+
+export const userMeta = {
+  findById: sql('user-meta/find-by-id.sql'),
+  update: sql('user-meta/update.sql'),
 };

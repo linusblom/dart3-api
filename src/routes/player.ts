@@ -2,7 +2,7 @@ import Router from 'koa-router';
 import { Context } from 'koa';
 
 import { PlayerController } from '../controllers';
-import { validate, pin } from '../middlewares';
+import { validate, pin, admin } from '../middlewares';
 import { createPlayerSchema, updatePlayerSchema, transactionSchema } from '../schemas';
 
 const router = new Router();
@@ -38,14 +38,14 @@ router
   )
   .post(
     '/:uid/deposit',
-    pin(true),
+    admin,
     validate(transactionSchema),
     async (ctx: Context) =>
       await ctrl.deposit(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
   )
   .post(
     '/:uid/withdrawal',
-    pin(true),
+    admin,
     validate(transactionSchema),
     async (ctx: Context) =>
       await ctrl.withdrawal(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),

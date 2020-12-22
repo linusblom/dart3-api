@@ -1,3 +1,3 @@
 INSERT INTO game (user_id, uid, type, tournament, team, random, legs, sets, bet, start_score, check_in, check_out, tie_break)
 VALUES (${userId}, ${uid}, ${type}, ${tournament}, ${team}, ${random}, ${legs}, ${sets}, ${bet}, ${startScore}, ${checkIn}, ${checkOut}, ${tieBreak})
-RETURNING id, uid, type, tournament, team, random, legs, sets, bet, prize_pool, start_score, check_in, check_out, tie_break, created_at, started_at, ended_at
+RETURNING id, uid, user_id, type, tournament, team, random, legs, sets, bet, prize_pool, start_score, check_in, check_out, tie_break, created_at, started_at, ended_at

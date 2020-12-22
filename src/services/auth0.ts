@@ -47,21 +47,6 @@ export class Auth0Service {
     return user;
   }
 
-  async getUserMetaData(ctx: Context, userId: string) {
-    const authorization = await this.getToken(ctx);
-
-    const { userMetadata } = await fetch<User>(
-      ctx,
-      `${AUTH0_URL}/api/v2/users/${userId}?fields=user_metadata`,
-      {
-        method: 'get',
-        headers: { authorization },
-      },
-    );
-
-    return userMetadata;
-  }
-
   async updateUser(ctx: Context, userId: string, body) {
     const authorization = await this.getToken(ctx);
 

@@ -13,34 +13,43 @@ export class UserController {
   async get(ctx: Context, userId: string) {
     const user = await this.service.getUser(ctx, userId);
     const bank = await db.transaction.findBankByUserId(userId);
+    const metaData = await db.userMeta.findById(userId);
 
-    return response(ctx, httpStatusCodes.OK, { ...user, bank });
+    return response(ctx, httpStatusCodes.OK, { ...user, metaData, bank });
   }
 
-  async update(ctx: Context, userId: string, body: Partial<User>) {
-    const user = await this.service.updateUser(ctx, userId, body);
+  async update(ctx: Context, userId: string, { metaData, ...auth0 }: Partial<User>) {
+    console.log(metaData);
+    console.log(auth0);
+    if (auth0 && Object.keys(auth0).length) {
+      await this.service.updateUser(ctx, userId, auth0);
+    }
 
-    return response(ctx, httpStatusCodes.OK, user);
+    if (metaData) {
+      await db.userMeta.update(userId, metaData.currency);
+    }
+
+    return response(ctx, httpStatusCodes.OK);
   }
 
   async bootstrap(ctx: Context, userId: string) {
     const user = await this.service.getUser(ctx, userId);
 
-    if (user.userMetadata && user.userMetadata.bootstrapped) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    }
+    // if (user.userMetadata && user.userMetadata.bootstrapped) {
+    //   return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
+    // }
 
-    await db.jackpot.init(userId);
+    // await db.jackpot.init(userId);
 
-    await this.service.updateUser(ctx, userId, {
-      userMetadata: {
-        bootstrapped: true,
-        currency: 'kr',
-        rake: 0.0,
-        jackpotFee: 0.08,
-        nextJackpotFee: 0.02,
-      },
-    });
+    // await this.service.updateUser(ctx, userId, {
+    //   userMetadata: {
+    //     bootstrapped: true,
+    //     currency: 'kr',
+    //     rake: 0.0,
+    //     jackpotFee: 0.08,
+    //     nextJackpotFee: 0.02,
+    //   },
+    // });
 
     return response(ctx, httpStatusCodes.OK);
   }

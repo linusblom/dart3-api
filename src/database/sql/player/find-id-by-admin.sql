@@ -1,0 +1,1 @@
+SELECT id FROM player WHERE user_id = ${userId} AND pin = crypt(${pin}, pin) AND admin = true

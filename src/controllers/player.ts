@@ -98,7 +98,7 @@ export class PlayerController {
 
   async delete(ctx: Context, userId: string, uid: string) {
     return db.tx(async t => {
-      const metaData = await this.auth0.getUserMetaData(ctx, userId);
+      const metaData = await t.userMeta.findById(userId);
       const { id } = await t.player.delete(userId, uid);
       const { balance } = await t.transaction.deletePlayer(id);
       const value = balance * metaData.jackpotFee;

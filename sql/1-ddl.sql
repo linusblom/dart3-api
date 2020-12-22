@@ -46,6 +46,16 @@ CREATE TYPE hit_type AS ENUM (
   'tie_break'
 );
 
+CREATE TABLE IF NOT EXISTS user_meta (
+  id                CHAR(30)      NOT NULL,
+  currency          VARCHAR(5)    NOT NULL DEFAULT '$',
+  jackpot_fee       REAL          NOT NULL DEFAULT 0.08,
+  next_jackpot_fee  REAL          NOT NULL DEFAULT 0.02,
+  rake              REAL          NOT NULL DEFAULT 0.00,
+  gem_chance        REAL          NOT NULL DEFAULT 0.015625,
+  PRIMARY KEY (id)
+);
+
 CREATE TABLE IF NOT EXISTS player (
   id                    SERIAL,
   user_id               CHAR(30)      NOT NULL,
@@ -61,8 +71,10 @@ CREATE TABLE IF NOT EXISTS player (
   avatar                VARCHAR,
   xp                    INTEGER       DEFAULT 0,
   pro                   BOOLEAN       DEFAULT false,
+  admin                 BOOLEAN       DEFAULT false,
   double                SMALLINT      DEFAULT 20,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  FOREIGN KEY (user_id) REFERENCES user_meta (id)
 );
 
 CREATE TABLE IF NOT EXISTS transaction (
@@ -97,7 +109,8 @@ CREATE TABLE IF NOT EXISTS game (
   created_at        TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   started_at        TIMESTAMP,
   ended_at          TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  FOREIGN KEY (user_id) REFERENCES user_meta (id)
 );
 
 CREATE TABLE IF NOT EXISTS team (
@@ -198,7 +211,8 @@ CREATE TABLE IF NOT EXISTS jackpot (
   next_value      NUMERIC(10,2) DEFAULT 0,
   started_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   won_at          TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  FOREIGN KEY (user_id) REFERENCES user_meta (id)
 );
 
 CREATE TABLE IF NOT EXISTS jackpot_winner (

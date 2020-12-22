@@ -88,7 +88,7 @@ export class CurrentGameController {
   async start(ctx: Context, service: GameService, userId: string) {
     try {
       const prizePool = Number(service.game.prizePool);
-      const metaData = await this.auth0.getUserMetaData(ctx, userId);
+      const metaData = await db.userMeta.findById(userId);
       const game = await service.start(metaData);
 
       ctx.logger.info(

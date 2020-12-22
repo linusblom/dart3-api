@@ -56,13 +56,6 @@ export abstract class GameService {
       .sort(arrayRandomizer);
   }
 
-  private getFractionParts(fraction: string) {
-    return {
-      numerator: +fraction.substr(0, fraction.indexOf('/')),
-      denominator: +fraction.substr(fraction.indexOf('/') + 1),
-    };
-  }
-
   async start({ jackpotFee, nextJackpotFee, rake }: MetaData) {
     return this.db.tx(async tx => {
       const { id: gameId, team, tournament } = this.game;
@@ -143,12 +136,10 @@ export abstract class GameService {
 
   async updateGems(scores: HitScore[], active: MatchActive, tx) {
     if (active.set === 1 && active.leg === 1 && active.round <= 3) {
+      const metaData = tx.one(sql.userMeta.findById, { id: this.game.userId });
       const rng = seedrandom();
-      const { numerator, denominator } = this.getFractionParts(process.env.JACKPOT_GEM);
 
-      this.gems = scores.map(
-        score => score.value > 0 && Math.floor(rng() * denominator) < numerator,
-      );
+      this.gems = scores.map(score => score.value > 0 && rng() < metaData.gemChance);
 
       await tx.none(sql.matchTeam.updateGems, {
         gems: this.gems.filter(gem => gem).length,

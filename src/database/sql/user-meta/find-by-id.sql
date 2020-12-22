@@ -1,0 +1,1 @@
+SELECT currency, jackpot_fee, next_jackpot_fee, rake, gem_chance FROM user_meta WHERE id = ${id}
