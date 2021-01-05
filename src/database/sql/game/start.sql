@@ -1,4 +1,3 @@
 UPDATE game
-SET started_at = current_timestamp, prize_pool = prize_pool - prize_pool * ${fee:raw}
+SET started_at = current_timestamp, prize_pool = prize_pool - prize_pool * ${fee:raw}, tournament = ${tournament}, team = ${team}, random = ${random}
 WHERE id = ${id}
-RETURNING id, uid, user_id, type, tournament, team, random, legs, sets, bet, prize_pool, check_in, check_out, start_score, tie_break, created_at, started_at, ended_at

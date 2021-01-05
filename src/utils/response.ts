@@ -2,11 +2,8 @@ import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 
 export const errorResponse = (ctx: Context, status = 500, error?: any) => {
-  if (status >= 500) {
-    ctx.logger.error({ status, ...(error && error) });
-  } else if (error) {
-    ctx.logger.info({ status, error });
-  }
+  const type = status >= 500 ? 'error' : 'info';
+  ctx.logger[type]({ status, ...(error && { error: error.stack }) });
 
   ctx.throw(status, httpStatusCodes.getStatusText(status));
 };

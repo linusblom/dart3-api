@@ -1,12 +1,11 @@
 import { Score, HitScore } from 'dart3-sdk';
 
-import * as sql from '../database/sql';
 import { GameService } from './game';
-import { MatchActive, NextMatchTeam } from '../models';
+import { NextMatchTeam } from '../models';
 
 export class HalveItService extends GameService {
   private checkValue(scores: Score[], valid: number) {
-    return scores.map(score => ({
+    return scores.map((score) => ({
       ...score,
       approved: valid === score.value ? this.getDartTotal(score) : 0,
       type: null,
@@ -14,7 +13,7 @@ export class HalveItService extends GameService {
   }
 
   private checkMultiplier(scores: Score[], valid: number) {
-    return scores.map(score => ({
+    return scores.map((score) => ({
       ...score,
       approved: valid === score.multiplier ? this.getDartTotal(score) : 0,
       type: null,
@@ -25,15 +24,15 @@ export class HalveItService extends GameService {
     const totalValid =
       this.getRoundTotal(scores) === valid && scores.filter(({ value }) => value > 0).length === 3;
 
-    return scores.map(score => ({
+    return scores.map((score) => ({
       ...score,
       approved: totalValid ? this.getDartTotal(score) : 0,
       type: null,
     }));
   }
 
-  private getHitScore(scores: Score[], round: number) {
-    switch (round) {
+  private getHitScore(scores: Score[]) {
+    switch (this.active.round) {
       case 1:
         return this.checkValue(scores, 19);
       case 2:
@@ -51,7 +50,7 @@ export class HalveItService extends GameService {
       case 8:
         return this.checkValue(scores, 25);
       default:
-        return scores.map(score => ({ ...score, approved: 0, type: null }));
+        return scores.map((score) => ({ ...score, approved: 0, type: null }));
     }
   }
 
@@ -61,9 +60,9 @@ export class HalveItService extends GameService {
     return total > 0 ? currentTotal + total : Math.ceil(currentTotal / 2);
   }
 
-  async getRoundScore(scores: Score[], active: MatchActive, tx) {
-    const { score } = await tx.one(sql.matchTeamLeg.findScoreById, { id: active.matchTeamLegId });
-    const hitScore = this.getHitScore(scores, active.round);
+  async getRoundScore(scores: Score[]) {
+    const { score } = await this.tx.matchTeamLeg.findScoreById(this.active.matchTeamLegId);
+    const hitScore = this.getHitScore(scores);
     const nextScore = this.getNextScore(hitScore, score);
 
     return {
@@ -73,14 +72,8 @@ export class HalveItService extends GameService {
     };
   }
 
-  async getLegResults(active: MatchActive, tx) {
-    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-      orderBy: 'ORDER BY d.score DESC',
-    });
-
+  async getLegResults() {
+    const matchTeams = await this.tx.matchTeam.findByMatchIdWithLeg(this.active, ['score DESC']);
     let endMatch = false;
     let endSet = false;
 
@@ -111,8 +104,8 @@ export class HalveItService extends GameService {
         ...acc,
         {
           match_team_id: team.id,
-          set: active.set,
-          leg: active.leg,
+          set: this.active.set,
+          leg: this.active.leg,
           position,
           leg_win: legWin,
           set_win: setWin,
@@ -120,18 +113,18 @@ export class HalveItService extends GameService {
       ];
     }, []);
 
-    return { data, matchTeams, endMatch, endSet };
+    const matchTeamIds = matchTeams.map(({ id }) => ({ id }));
+
+    return { data, matchTeamIds, endMatch, endSet };
   }
 
-  async next(nextTeam: NextMatchTeam, nextRound: boolean, active: MatchActive, tx) {
-    if (nextRound && active.round === 8) {
-      return this.nextLeg(active, tx);
+  async next(nextTeam: NextMatchTeam, nextRound: boolean) {
+    if (nextRound && this.active.round === 8) {
+      return this.nextLeg();
+    } else if (nextRound) {
+      return this.nextRound(nextTeam);
     }
 
-    if (nextRound) {
-      return this.nextRound(nextTeam, active, tx);
-    }
-
-    return this.nextMatchTeam(nextTeam, active, tx);
+    return this.nextMatchTeam(nextTeam);
   }
 }

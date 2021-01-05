@@ -11,6 +11,10 @@ export class UserMetaRepository {
   }
 
   async update(id: string, currency: string) {
-    return this.db.none(sql.update, { id, currency });
+    await this.db.none(sql.update, { id, currency });
+  }
+
+  async init(id: string) {
+    return this.db.one<MetaData>(sql.create, { id });
   }
 }

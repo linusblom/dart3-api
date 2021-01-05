@@ -1,5 +1,5 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { CreateGame, Game } from 'dart3-sdk';
+import { CreateGame, Game, MetaData, StartGame } from 'dart3-sdk';
 import { nanoid } from 'nanoid';
 
 import { game as sql } from '../database/sql';
@@ -19,7 +19,23 @@ export class GameRepository {
     return this.db.one<Game>(sql.create, { userId, uid: nanoid(20), ...game });
   }
 
+  async update(id: number, payload: StartGame) {
+    await this.db.none(sql.update, { id, ...payload });
+  }
+
   async delete(id: number) {
-    return this.db.none(sql.delete, { id });
+    await this.db.none(sql.delete, { id });
+  }
+
+  async start(id: number, payload: StartGame, meta: MetaData) {
+    await this.db.none(sql.start, {
+      id,
+      fee: meta.jackpotFee + meta.nextJackpotFee + meta.rake,
+      ...payload,
+    });
+  }
+
+  async end(id: number) {
+    await this.db.none(sql.end, { id });
   }
 }

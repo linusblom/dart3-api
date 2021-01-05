@@ -2,7 +2,7 @@ import Router from 'koa-router';
 
 import { CurrentGameController } from '../controllers';
 import { pin, validate, gameStarted } from '../middlewares';
-import { createTeamPlayerSchema, createRoundSchema } from '../schemas';
+import { createTeamPlayerSchema, createRoundSchema, startGameSchema } from '../schemas';
 
 const router = new Router();
 const ctrl = new CurrentGameController();
@@ -27,7 +27,8 @@ router
   .patch(
     '/start',
     gameStarted(false),
-    async (ctx) => await ctrl.start(ctx, ctx.state.service, ctx.state.userId),
+    validate(startGameSchema),
+    async (ctx) => await ctrl.start(ctx, ctx.state.service, ctx.request.body),
   )
   .get('/match', gameStarted(true), async (ctx) => await ctrl.getMatches(ctx, ctx.state.service))
   .post(

@@ -1,6 +1,6 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import { User } from 'dart3-sdk';
+import { Jackpot, MetaData, User } from 'dart3-sdk';
 
 import { Auth0Service } from '../services';
 import { response, errorResponse } from '../utils';
@@ -19,8 +19,6 @@ export class UserController {
   }
 
   async update(ctx: Context, userId: string, { metaData, ...auth0 }: Partial<User>) {
-    console.log(metaData);
-    console.log(auth0);
     if (auth0 && Object.keys(auth0).length) {
       await this.service.updateUser(ctx, userId, auth0);
     }
@@ -33,37 +31,38 @@ export class UserController {
   }
 
   async bootstrap(ctx: Context, userId: string) {
-    const user = await this.service.getUser(ctx, userId);
+    let jackpot: Jackpot;
+    let metaData: MetaData;
 
-    // if (user.userMetadata && user.userMetadata.bootstrapped) {
-    //   return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-    // }
+    try {
+      jackpot = await db.jackpot.get(userId);
+      ctx.logger.info({ userId, status: 'Jackpot already initiated' }, 'Bootstrap');
+    } catch (err) {
+      jackpot = await db.jackpot.init(userId);
+      ctx.logger.info({ userId, status: 'Jackpot initiated' }, 'Bootstrap');
+    }
 
-    // await db.jackpot.init(userId);
+    try {
+      metaData = await db.userMeta.init(userId);
+      ctx.logger.info({ userId, status: 'UserMeta initiated' }, 'Bootstrap');
+    } catch (err) {
+      metaData = await db.userMeta.findById(userId);
+      ctx.logger.info({ userId, status: 'UserMeta already initiated' }, 'Bootstrap');
+    }
 
-    // await this.service.updateUser(ctx, userId, {
-    //   userMetadata: {
-    //     bootstrapped: true,
-    //     currency: 'kr',
-    //     rake: 0.0,
-    //     jackpotFee: 0.08,
-    //     nextJackpotFee: 0.02,
-    //   },
-    // });
-
-    return response(ctx, httpStatusCodes.OK);
+    return response(ctx, httpStatusCodes.OK, { jackpot, metaData });
   }
 
   async upload(ctx: Context, userId: string, file: any) {
-    if (!/image\/(gif|jpeg|png)/.test(file.mimetype)) {
-      return errorResponse(ctx, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
-    }
-
     try {
       const url = await uploadFile(userId, file);
 
       return response(ctx, httpStatusCodes.OK, { url });
     } catch (error) {
+      if (error.message === 'Unsupported media type') {
+        return errorResponse(ctx, httpStatusCodes.UNSUPPORTED_MEDIA_TYPE);
+      }
+
       return errorResponse(ctx, httpStatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }

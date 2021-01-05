@@ -1,6 +1,12 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import { CreatePlayer, UpdatePlayer, CreateTransaction, GRAVATAR } from 'dart3-sdk';
+import {
+  CreatePlayer,
+  UpdatePlayer,
+  CreateTransaction,
+  GRAVATAR,
+  TransactionType,
+} from 'dart3-sdk';
 import md5 from 'md5';
 
 import { randomColor, generatePin, response, errorResponse } from '../utils';
@@ -12,10 +18,9 @@ import {
 } from '../aws';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
-import { Auth0Service } from '../services';
 
 export class PlayerController {
-  constructor(private auth0 = Auth0Service.getInstance()) {}
+  constructor() {}
 
   async get(ctx: Context, userId: string) {
     const players = await db.player.all(userId);
@@ -25,7 +30,7 @@ export class PlayerController {
 
   async getByUid(ctx: Context, userId: string, uid: string) {
     try {
-      return db.task(async t => {
+      return db.task(async (t) => {
         const player = await t.player.findByUid(userId, uid);
         const transactions = await t.transaction.findByPlayerId(player.id);
         const statistics = await t.player.findStatisticsById(player.id);
@@ -53,7 +58,7 @@ export class PlayerController {
   }
 
   async update(ctx: Context, userId: string, uid: string, body: UpdatePlayer) {
-    return db.task(async t => {
+    return db.task(async (t) => {
       let avatar = body.avatar;
 
       if (avatar === GRAVATAR) {
@@ -71,7 +76,7 @@ export class PlayerController {
   async resetPin(ctx: Context, userId: string, uid: string) {
     const pin = generatePin();
 
-    return db.task(async t => {
+    return db.task(async (t) => {
       await t.player.updatePin(userId, uid, pin);
       const player = await t.player.findByUid(userId, uid);
 
@@ -84,7 +89,7 @@ export class PlayerController {
   }
 
   async disablePin(ctx: Context, userId: string, uid: string) {
-    return db.task(async t => {
+    return db.task(async (t) => {
       await t.player.disablePin(userId, uid);
       const player = await t.player.findByUid(userId, uid);
 
@@ -97,7 +102,7 @@ export class PlayerController {
   }
 
   async delete(ctx: Context, userId: string, uid: string) {
-    return db.tx(async t => {
+    return db.tx(async (t) => {
       const metaData = await t.userMeta.findById(userId);
       const { id } = await t.player.delete(userId, uid);
       const { balance } = await t.transaction.deletePlayer(id);
@@ -113,9 +118,9 @@ export class PlayerController {
   }
 
   async deposit(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
-    return db.task(async t => {
+    return db.task(async (t) => {
       const player = await t.player.findIdByUid(userId, uid);
-      const transaction = await t.transaction.deposit(player.id, body);
+      const transaction = await t.transaction.credit(player.id, TransactionType.Deposit, body);
 
       ctx.logger.info({ to: uid, ...body }, 'Deposit');
 
@@ -125,9 +130,9 @@ export class PlayerController {
 
   async withdrawal(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
     try {
-      return db.task(async t => {
+      return db.task(async (t) => {
         const player = await t.player.findIdByUid(userId, uid);
-        const transaction = await t.transaction.withdrawal(player.id, body);
+        const transaction = await t.transaction.debit(player.id, TransactionType.Withdrawal, body);
 
         ctx.logger.info({ from: uid, ...body }, 'Withdrawal');
 

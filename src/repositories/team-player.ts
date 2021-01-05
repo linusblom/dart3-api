@@ -1,7 +1,9 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { TeamPlayer, TransactionType, GameType } from 'dart3-sdk';
+import { DbId, TeamPlayer, TransactionType } from 'dart3-sdk';
 
 import * as sql from '../database/sql';
+import { MatchActive, TeamPlayerPro } from '../models';
+import { throws } from 'assert';
 
 export class TeamPlayerRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
@@ -10,8 +12,14 @@ export class TeamPlayerRepository {
     return this.db.any<TeamPlayer>(sql.teamPlayer.findByGameId, { gameId });
   }
 
-  async create(gameId: number, playerId: number, bet: number, type: GameType) {
-    return this.db.tx(async tx => {
+  async findByGameIdWithPro(gameId: number) {
+    return this.db.any<TeamPlayerPro>(sql.teamPlayer.findByGameIdWithPro, {
+      gameId,
+    });
+  }
+
+  async create(gameId: number, playerId: number, bet: number) {
+    return this.db.tx(async (tx) => {
       await tx.none(sql.teamPlayer.create, { gameId, playerId });
 
       await tx.one(sql.transaction.debit, {
@@ -20,14 +28,11 @@ export class TeamPlayerRepository {
         type: TransactionType.Bet,
         amount: bet,
       });
-
-      const players: TeamPlayer[] = await tx.any(sql.teamPlayer.findByGameId, { gameId });
-      return players;
     });
   }
 
-  async delete(gameId: number, playerId: number, bet: number, type: GameType) {
-    return this.db.tx(async tx => {
+  async delete(gameId: number, playerId: number, bet: number) {
+    return this.db.tx(async (tx) => {
       await tx.one(sql.teamPlayer.delete, { gameId, playerId });
 
       await tx.one(sql.transaction.credit, {
@@ -36,9 +41,27 @@ export class TeamPlayerRepository {
         type: TransactionType.Refund,
         amount: bet,
       });
-
-      const players: TeamPlayer[] = await tx.any(sql.teamPlayer.findByGameId, { gameId });
-      return players;
     });
+  }
+
+  async updateTeamIds(ids: number[][], teamIds: DbId[]) {
+    const data = ids.reduce(
+      (acc, ids, index) => [
+        ...acc,
+        ...ids.map((id) => ({ id, team_id: teamIds[index].id, xp: 100 })),
+      ],
+      [],
+    );
+    const cs = new this.pgp.helpers.ColumnSet(['?id', 'team_id', 'xp'], { table: 'team_player' });
+
+    await this.db.none(`${this.pgp.helpers.update(data, cs)} WHERE v.id = t.id`);
+  }
+
+  async updateXp({ teamId, playerId }: MatchActive, xp: number) {
+    await this.db.none(sql.teamPlayer.updateXp, { teamId, playerId, xp });
+  }
+
+  async updateWin(gameId: number, playerId: number, win: number) {
+    await this.db.none(sql.teamPlayer.updateWin, { gameId, playerId, win, xp: 1000 });
   }
 }

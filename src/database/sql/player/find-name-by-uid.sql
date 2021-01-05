@@ -1,0 +1,1 @@
+SELECT id, name FROM player WHERE user_id = ${userId} AND uid = ${uid}

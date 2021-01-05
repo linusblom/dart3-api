@@ -14,12 +14,13 @@ function sql(file: string): QueryFile {
 }
 
 export const game = {
-  endById: sql('game/end-by-id.sql'),
+  end: sql('game/end.sql'),
   create: sql('game/create.sql'),
   delete: sql('game/delete.sql'),
   findByUid: sql('game/find-by-uid.sql'),
   findCurrent: sql('game/find-current.sql'),
   start: sql('game/start.sql'),
+  update: sql('game/update.sql'),
 };
 
 export const hit = {
@@ -30,6 +31,7 @@ export const hit = {
 };
 
 export const jackpot = {
+  create: sql('jackpot/create.sql'),
   findCurrent: sql('jackpot/find-current.sql'),
   increaseByGameId: sql('jackpot/increase-by-game-id.sql'),
   increaseByValues: sql('jackpot/increase-by-values.sql'),
@@ -37,7 +39,7 @@ export const jackpot = {
 
 export const match = {
   create: sql('match/create.sql'),
-  endById: sql('match/end-by-id.sql'),
+  end: sql('match/end.sql'),
   findActiveByGameId: sql('match/find-active-by-game-id.sql'),
   findByGameId: sql('match/find-by-game-id.sql'),
   findById: sql('match/find-by-id.sql'),
@@ -55,8 +57,8 @@ export const matchTeam = {
   findNextOrder: sql('match-team/find-next-order.sql'),
   findByMatchIdWithLeg: sql('match-team/find-by-match-id-with-leg.sql'),
   findByMatchIdWithOrder: sql('match-team/find-by-match-id-with-order.sql'),
-  findResults: sql('match-team/find-results.sql'),
-  findWinners: sql('match-team/find-winners.sql'),
+  findResultsByMatchId: sql('match-team/find-results-by-match-id.sql'),
+  findWinnersByMatchId: sql('match-team/find-winners-by-match-id.sql'),
   findByMatchIdAndOrder: sql('match-team/find-by-match-id-and-order.sql'),
   updateGems: sql('match-team/update-gems.sql'),
 };
@@ -64,7 +66,7 @@ export const matchTeam = {
 export const matchTeamLeg = {
   findScoreById: sql('match-team-leg/find-score-by-id.sql'),
   findTeamsLeftCount: sql('match-team-leg/find-teams-left-count.sql'),
-  setPosition: sql('match-team-leg/set-position.sql'),
+  updatePosition: sql('match-team-leg/update-position.sql'),
   updateScore: sql('match-team-leg/update-score.sql'),
 };
 
@@ -77,6 +79,7 @@ export const player = {
   findIdByAdmin: sql('player/find-id-by-admin.sql'),
   findIdByPin: sql('player/find-id-by-pin.sql'),
   findIdByUid: sql('player/find-id-by-uid.sql'),
+  findNameByUid: sql('player/find-name-by-uid.sql'),
   findStatisticsById: sql('player/find-statistics-by-id.sql'),
   updatePin: sql('player/update-pin.sql'),
   update: sql('player/update.sql'),
@@ -100,7 +103,7 @@ export const teamPlayer = {
   delete: sql('team-player/delete.sql'),
   findByGameIdWithPro: sql('team-player/find-by-game-id-with-pro.sql'),
   findByGameId: sql('team-player/find-by-game-id.sql'),
-  updateWinXp: sql('team-player/update-win-xp.sql'),
+  updateWin: sql('team-player/update-win.sql'),
   updateXp: sql('team-player/update-xp.sql'),
 };
 
@@ -113,6 +116,7 @@ export const transaction = {
 };
 
 export const userMeta = {
+  create: sql('user-meta/create.sql'),
   findById: sql('user-meta/find-by-id.sql'),
   update: sql('user-meta/update.sql'),
 };

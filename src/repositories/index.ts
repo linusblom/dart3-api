@@ -9,6 +9,7 @@ import { MatchTeamRepository } from './match-team';
 import { JackpotRepository } from './jackpot';
 import { InvoiceRepository } from './invoice';
 import { UserMetaRepository } from './user-meta';
+import { MatchTeamLegRepository } from './match-team-leg';
 
 interface Extensions {
   player: PlayerRepository;
@@ -19,6 +20,7 @@ interface Extensions {
   teamPlayer: TeamPlayerRepository;
   match: MatchRepository;
   matchTeam: MatchTeamRepository;
+  matchTeamLeg: MatchTeamLegRepository;
   jackpot: JackpotRepository;
   invoice: InvoiceRepository;
   userMeta: UserMetaRepository;
@@ -34,6 +36,7 @@ export {
   TeamPlayerRepository,
   MatchRepository,
   MatchTeamRepository,
+  MatchTeamLegRepository,
   JackpotRepository,
   InvoiceRepository,
   UserMetaRepository,

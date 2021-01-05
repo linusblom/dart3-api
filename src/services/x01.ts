@@ -1,8 +1,7 @@
 import { Score, Check, HitType } from 'dart3-sdk';
 
 import { GameService } from './game';
-import { MatchActive, NextMatchTeam } from '../models';
-import * as sql from '../database/sql';
+import { NextMatchTeam } from '../models';
 
 export class X01Service extends GameService {
   validMultiplier(check: Check, multiplier: number) {
@@ -66,24 +65,22 @@ export class X01Service extends GameService {
 
       if (bust || (approved === 0 && dartTotal > 0)) {
         bust = true;
-        return array.map(s => ({ ...s, approved: 0, type: null }));
+        return array.map((s) => ({ ...s, approved: 0, type: null }));
       }
 
       return [...acc, { ...score, approved, type }];
     }, []);
   }
 
-  async getRoundScore(scores: Score[], active: MatchActive, tx) {
+  async getRoundScore(scores: Score[]) {
     const totalScore = this.getRoundTotal(scores);
-    const { score } = await tx.one(sql.matchTeamLeg.findScoreById, {
-      id: active.matchTeamLegId,
-    });
+    const { score } = await this.tx.matchTeamLeg.findScoreById(this.active.matchTeamLegId);
 
     let hitScores = [];
     let nextScore = 0;
 
-    if (active.round > this.game.tieBreak) {
-      hitScores = scores.map(s => ({
+    if (this.active.round > this.game.tieBreak) {
+      hitScores = scores.map((s) => ({
         ...s,
         approved: this.getDartTotal(s),
         type: HitType.TieBreak,
@@ -93,7 +90,7 @@ export class X01Service extends GameService {
       hitScores = this.getApprovedCheckInScore(scores);
       nextScore = score - hitScores.reduce((t, s) => t + s.approved, 0);
     } else {
-      hitScores = scores.map(s => ({ ...s, approved: this.getDartTotal(s), type: null }));
+      hitScores = scores.map((s) => ({ ...s, approved: this.getDartTotal(s), type: null }));
       nextScore = score - hitScores.reduce((t, s) => t + s.approved, 0);
 
       if (nextScore <= 1) {
@@ -109,16 +106,11 @@ export class X01Service extends GameService {
     };
   }
 
-  async getLegResults(active: MatchActive, tx) {
-    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-      orderBy:
-        active.round > this.game.tieBreak
-          ? 'ORDER BY d.position NULLS FIRST, d.score DESC'
-          : 'ORDER BY d.score',
-    });
+  async getLegResults() {
+    const matchTeams = await this.tx.matchTeam.findByMatchIdWithLeg(
+      this.active,
+      this.active.round > this.game.tieBreak ? ['position NULLS FIRST', 'score DESC'] : ['score'],
+    );
 
     let endMatch = false;
     let endSet = false;
@@ -146,73 +138,45 @@ export class X01Service extends GameService {
 
       return {
         match_team_id: team.id,
-        set: active.set,
-        leg: active.leg,
+        set: this.active.set,
+        leg: this.active.leg,
         position,
         leg_win: legWin,
         set_win: setWin,
       };
     }, []);
 
-    return { data, matchTeams, endMatch, endSet };
+    const matchTeamIds = matchTeams.map(({ id }) => ({ id }));
+
+    return { data, matchTeamIds, endMatch, endSet };
   }
 
-  async checkTieBreak(nextTeam: NextMatchTeam, active: MatchActive, tx) {
-    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-      orderBy: 'ORDER BY d.position NULLS FIRST, d.score DESC',
-    });
+  async checkTieBreak(nextTeam: NextMatchTeam) {
+    const matchTeams = await this.tx.matchTeam.findByMatchIdWithLeg(this.active, [
+      'position NULLS FIRST',
+      'score DESC',
+    ]);
 
     if (matchTeams[0].score === matchTeams[1].score) {
-      const beatenTeamsData = matchTeams
-        .filter(({ position }) => !position)
-        .map(({ id, score }, index, array) => ({
-          match_team_id: id,
-          set: active.set,
-          leg: active.leg,
-          score: 0,
-          position: score !== array[0].score ? index + 1 : null,
-        }))
-        .filter(({ position }) => !!position);
+      await this.tx.matchTeamLeg.updateBeatenTeams(this.active, matchTeams);
 
-      if (beatenTeamsData.length) {
-        const beatenTeamsCs = new this.ColumnSet(
-          ['?match_team_id', '?set', '?leg', 'position', 'score'],
-          { table: 'match_team_leg' },
-        );
-        await tx.none(
-          `${this.update(
-            beatenTeamsData,
-            beatenTeamsCs,
-          )} WHERE v.match_team_id = t.match_team_id AND v.set = t.set AND v.leg = t.leg`,
-        );
-      }
-
-      return this.nextRound(nextTeam, active, tx);
+      return this.nextRound(nextTeam);
     }
 
-    return this.nextLeg(active, tx);
+    return this.nextLeg();
   }
 
-  async next(nextTeam: NextMatchTeam, nextRound: boolean, active: MatchActive, tx) {
-    const { score } = await tx.one(sql.matchTeamLeg.findScoreById, {
-      id: active.matchTeamLegId,
-    });
+  async next(nextTeam: NextMatchTeam, nextRound: boolean) {
+    const { score } = await this.tx.matchTeamLeg.findScoreById(this.active.matchTeamLegId);
 
     if (score === 0) {
-      return this.nextLeg(active, tx);
+      return this.nextLeg();
+    } else if (!nextRound) {
+      return this.nextMatchTeam(nextTeam);
+    } else if (this.active.round > this.game.tieBreak) {
+      return this.checkTieBreak(nextTeam);
     }
 
-    if (!nextRound) {
-      return this.nextMatchTeam(nextTeam, active, tx);
-    }
-
-    if (active.round > this.game.tieBreak) {
-      return this.checkTieBreak(nextTeam, active, tx);
-    }
-
-    return this.nextRound(nextTeam, active, tx);
+    return this.nextRound(nextTeam);
   }
 }

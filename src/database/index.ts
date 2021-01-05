@@ -12,6 +12,7 @@ import {
   TeamPlayerRepository,
   MatchRepository,
   MatchTeamRepository,
+  MatchTeamLegRepository,
   JackpotRepository,
   InvoiceRepository,
   UserMetaRepository,
@@ -48,8 +49,9 @@ const initOptions: IInitOptions<Extensions> = {
     obj.jackpot = new JackpotRepository(obj, pgp);
     obj.invoice = new InvoiceRepository(obj, pgp);
     obj.userMeta = new UserMetaRepository(obj, pgp);
+    obj.matchTeamLeg = new MatchTeamLegRepository(obj, pgp);
   },
-  receive: function(data) {
+  receive: function (data) {
     camelizeColumnNames(data);
   },
 };

@@ -1,32 +1,40 @@
-import { IDatabase, IMain } from 'pg-promise';
-import { TransactionType } from 'dart3-sdk';
+import { IDatabase, IMain, ColumnSet } from 'pg-promise';
+import { Jackpot, MetaData, TransactionType } from 'dart3-sdk';
 
 import * as sql from '../database/sql';
 
 export class JackpotRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
-  init(userId: string) {
-    return this.db.none('INSERT INTO jackpot (user_id) VALUES ($1)', [userId]);
+  async init(userId: string) {
+    return this.db.one<Jackpot>(sql.jackpot.create, { userId });
   }
 
-  get(userId: string) {
-    return this.db.one(sql.jackpot.findCurrent, { userId });
+  async get(userId: string) {
+    return this.db.one<Jackpot>(sql.jackpot.findCurrent, { userId });
   }
 
-  increaseByValues(userId: string, value: number, nextValue: number) {
-    return this.db.none(sql.jackpot.increaseByValues, { userId, value, nextValue });
+  async increaseByValues(userId: string, value: number, nextValue: number) {
+    await this.db.none(sql.jackpot.increaseByValues, { userId, value, nextValue });
   }
 
-  winner(userId: string, gameId: number, matchTeamId: number) {
-    return this.db.tx(async tx => {
+  async increaseByGameId(gameId: number, meta: MetaData) {
+    await this.db.none(sql.jackpot.increaseByGameId, {
+      gameId,
+      fee: meta.jackpotFee,
+      nextFee: meta.nextJackpotFee,
+    });
+  }
+
+  async winner(userId: string, gameId: number, matchTeamId: number) {
+    return this.db.tx(async (tx) => {
       const team = await tx.one(sql.matchTeam.findById, { id: matchTeamId });
       const jackpot = await tx.one(sql.jackpot.findCurrent, { userId });
       const win = jackpot.value / team.playerIds.length;
       const xp = 10000 / team.playerIds.length;
 
       const winnersData = await Promise.all(
-        team.playerIds.map(async playerId => {
+        team.playerIds.map(async (playerId) => {
           await tx.one(sql.transaction.credit, {
             playerId,
             description: 'JACKPOT!',
@@ -47,7 +55,7 @@ export class JackpotRepository {
         }),
       );
 
-      const winnerCs = new this.pgp.helpers.ColumnSet(['jackpot_id', 'player_id', 'match_id'], {
+      const winnerCs = new ColumnSet(['jackpot_id', 'player_id', 'match_id'], {
         table: 'jackpot_winner',
       });
       await tx.none(this.pgp.helpers.insert(winnersData, winnerCs));

@@ -1,64 +1,54 @@
-import { IDatabase, IMain } from 'pg-promise';
+import { IDatabase, IMain, ITask } from 'pg-promise';
 import { Transaction, CreateTransaction, Bank, TransactionType } from 'dart3-sdk';
 
-import { transaction as sql } from '../database/sql';
+import * as sql from '../database/sql';
+import { Extensions } from './index';
 
 export class TransactionRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
 
   async findBankByUserId(userId: string) {
-    return this.db.one<Bank>(sql.findBankByUserId, { userId });
+    return this.db.one<Bank>(sql.transaction.findBankByUserId, { userId });
   }
 
   async findByPlayerId(playerId: number, limit = 10) {
-    return this.db.any<Transaction>(sql.findByPlayerId, { playerId, limit });
+    return this.db.any<Transaction>(sql.transaction.findByPlayerId, { playerId, limit });
   }
 
   async deletePlayer(playerId: number) {
-    return this.db.one<{ balance: number }>(sql.deletePlayer, { playerId });
+    return this.db.one<{ balance: number }>(sql.transaction.deletePlayer, { playerId });
   }
 
-  async deposit(playerId: number, transaction: CreateTransaction) {
-    return this.db.one<Transaction>(sql.credit, {
+  async credit(playerId: number, type: TransactionType, transaction: CreateTransaction) {
+    return this.db.one<Transaction>(sql.transaction.credit, {
       playerId,
+      type,
       description: '',
-      type: TransactionType.Deposit,
       ...transaction,
     });
   }
 
-  async withdrawal(playerId: number, transaction: CreateTransaction) {
-    return this.db.one<Transaction>(sql.debit, {
+  async debit(playerId: number, type: TransactionType, transaction: CreateTransaction) {
+    return this.db.one<Transaction>(sql.transaction.debit, {
       playerId,
+      type,
       description: '',
-      type: TransactionType.Withdrawal,
       ...transaction,
     });
   }
 
   async transfer(userId: string, uid: string, receiverUid: string, transaction: CreateTransaction) {
-    return this.db.tx(async tx => {
-      const player = await tx.one('SELECT id, name FROM player WHERE user_id = $1 AND uid = $2', [
-        userId,
-        uid,
-      ]);
-      const receiverPlayer = await tx.one(
-        'SELECT id, name FROM player WHERE user_id = $1 AND uid = $2',
-        [userId, receiverUid],
-      );
+    return this.db.tx(async (tx: ITask<Extensions> & Extensions) => {
+      const player = await tx.one(sql.player.findNameByUid, { userId, uid });
+      const receiverPlayer = await tx.one(sql.player.findNameByUid, { userId, uid: receiverUid });
 
-      const debit: Transaction = await tx.one(sql.debit, {
-        playerId: player.id,
+      const debit = await tx.transaction.debit(player.id, TransactionType.Transfer, {
+        ...transaction,
         description: `To ${receiverPlayer.name}`,
-        type: TransactionType.Transfer,
-        ...transaction,
       });
-
-      await tx.one(sql.credit, {
-        playerId: receiverPlayer.id,
-        description: `From ${player.name}`,
-        type: TransactionType.Transfer,
+      await tx.transaction.credit(receiverPlayer.id, TransactionType.Transfer, {
         ...transaction,
+        description: `From ${player.name}`,
       });
 
       return debit;

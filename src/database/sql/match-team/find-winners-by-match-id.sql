@@ -3,4 +3,4 @@ FROM match_team mt
 LEFT JOIN team_player tp ON mt.team_id = tp.team_id
 WHERE match_id = ${matchId}
 GROUP BY mt.id
-ORDER BY mt.position;
+ORDER BY mt.position
