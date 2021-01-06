@@ -2,29 +2,26 @@ import httpStatusCodes from 'http-status-codes';
 
 import { errorResponse } from '../utils';
 import { db } from '../database';
-import { player as sql } from '../database/sql';
 
 export const pin = (allowDisabled: boolean) => async (ctx, next) => {
   const pin = ctx.get('x-pin');
+  const uid = ctx.params.uid || ctx.request.body.uid;
 
-  if (!/^[0-9]{4}$/.test(pin)) {
+  if (!/^[0-9]{4}$/.test(pin) || !uid) {
     return errorResponse(ctx, httpStatusCodes.FORBIDDEN);
   }
 
-  const player = await db.oneOrNone(sql.findIdByPin, {
-    uid: ctx.params.uid || ctx.request.body.uid,
-    userId: ctx.state.userId,
-    pin,
-  });
+  const playerId = await db.player.findIdByPin(ctx.state.userId, uid, pin);
 
-  if (!player && !allowDisabled) {
+  if (!playerId && !allowDisabled) {
     return errorResponse(ctx, httpStatusCodes.FORBIDDEN);
-  } else if (!player) {
+  } else if (!playerId) {
     try {
-      await db.one(sql.findIdByUid, {
-        uid: ctx.params.uid || ctx.request.body.uid,
-        userId: ctx.state.userId,
-      });
+      const player = await db.player.findByUid(ctx.state.userId, uid);
+
+      if (!player.pinDisabled) {
+        throw player;
+      }
     } catch (err) {
       return errorResponse(ctx, httpStatusCodes.FORBIDDEN);
     }

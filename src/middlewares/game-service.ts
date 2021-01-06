@@ -5,7 +5,6 @@ import { Logger } from 'pino';
 import { errorResponse } from '../utils';
 import { db } from '../database';
 import { GameService, X01Service, LegsService, HalveItService } from '../services';
-import { game as sql } from '../database/sql';
 
 const getGameService = (game: Game, logger: Logger): GameService => {
   switch (game.type) {
@@ -19,17 +18,13 @@ const getGameService = (game: Game, logger: Logger): GameService => {
 };
 
 export const gameService = async (ctx, next) => {
-  let game: Game;
+  const game = await db.game.findCurrent(ctx.state.userId);
 
-  try {
-    game = await db.one(sql.findCurrent, { userId: ctx.state.userId });
-  } catch (err) {
+  if (!game) {
     errorResponse(ctx, httpStatusCodes.NOT_FOUND);
   }
 
-  const service = getGameService(game, ctx.logger);
-
-  ctx.state = { ...ctx.state, service };
+  ctx.state = { ...ctx.state, service: getGameService(game, ctx.logger) };
 
   return next();
 };

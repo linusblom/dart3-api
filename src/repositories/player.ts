@@ -22,6 +22,14 @@ export class PlayerRepository {
     return this.db.one<Player>(sql.findByUid, { userId, uid });
   }
 
+  async findIdByPin(userId: string, uid: string, pin: string) {
+    return this.db.oneOrNone<DbId>(sql.findIdByPin, { userId, uid, pin });
+  }
+
+  async findIdByAdmin(userId: string, pin: string) {
+    return this.db.one<DbId>(sql.findIdByAdmin, { userId, pin });
+  }
+
   async create(userId: string, player: CreatePlayer, color: string, avatar: string, pin: string) {
     return this.db.one<Player>(sql.create, {
       userId,
