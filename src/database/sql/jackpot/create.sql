@@ -1,0 +1,1 @@
+INSERT INTO jackpot (user_id) VALUES (${userId}) RETURNING id, value, next_value

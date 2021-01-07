@@ -1,0 +1,1 @@
+INSERT INTO user_meta (id) VALUES (${id}) RETURNING currency, jackpot_fee, next_jackpot_fee, rake, gem_chance

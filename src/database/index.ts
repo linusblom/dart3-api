@@ -12,8 +12,10 @@ import {
   TeamPlayerRepository,
   MatchRepository,
   MatchTeamRepository,
+  MatchTeamLegRepository,
   JackpotRepository,
   InvoiceRepository,
+  UserMetaRepository,
 } from '../repositories';
 
 type ExtendedProtocol = IDatabase<Extensions> & Extensions;
@@ -46,8 +48,10 @@ const initOptions: IInitOptions<Extensions> = {
     obj.matchTeam = new MatchTeamRepository(obj, pgp);
     obj.jackpot = new JackpotRepository(obj, pgp);
     obj.invoice = new InvoiceRepository(obj, pgp);
+    obj.userMeta = new UserMetaRepository(obj, pgp);
+    obj.matchTeamLeg = new MatchTeamLegRepository(obj, pgp);
   },
-  receive: function(data) {
+  receive: function (data) {
     camelizeColumnNames(data);
   },
 };

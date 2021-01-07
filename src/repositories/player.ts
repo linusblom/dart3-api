@@ -22,6 +22,14 @@ export class PlayerRepository {
     return this.db.one<Player>(sql.findByUid, { userId, uid });
   }
 
+  async findIdByPin(userId: string, uid: string, pin: string) {
+    return this.db.oneOrNone<DbId>(sql.findIdByPin, { userId, uid, pin });
+  }
+
+  async findIdByAdmin(userId: string, pin: string) {
+    return this.db.one<DbId>(sql.findIdByAdmin, { userId, pin });
+  }
+
   async create(userId: string, player: CreatePlayer, color: string, avatar: string, pin: string) {
     return this.db.one<Player>(sql.create, {
       userId,
@@ -34,15 +42,15 @@ export class PlayerRepository {
   }
 
   async update(userId: string, uid: string, player: UpdatePlayer) {
-    return this.db.none(sql.update, { userId, uid, ...player });
+    await this.db.none(sql.update, { userId, uid, ...player });
   }
 
   async updatePin(userId: string, uid: string, pin: string) {
-    return this.db.none(sql.updatePin, { userId, uid, pin });
+    await this.db.none(sql.updatePin, { userId, uid, pin });
   }
 
   async disablePin(userId: string, uid: string) {
-    return this.db.none(sql.disablePin, { userId, uid });
+    await this.db.none(sql.disablePin, { userId, uid });
   }
 
   async delete(userId: string, uid: string) {
@@ -51,5 +59,9 @@ export class PlayerRepository {
 
   async findStatisticsById(playerId: number) {
     return this.db.one(sql.findStatisticsById, { playerId });
+  }
+
+  async updateXp(id: number, gameId: number) {
+    await this.db.none(sql.updateXp, { id, gameId });
   }
 }

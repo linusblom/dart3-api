@@ -1,35 +1,30 @@
 import httpStatusCodes from 'http-status-codes';
-import { Context } from 'koa';
 import { Game, GameType } from 'dart3-sdk';
+import { Logger } from 'pino';
 
 import { errorResponse } from '../utils';
-import { db, pgp } from '../database';
+import { db } from '../database';
 import { GameService, X01Service, LegsService, HalveItService } from '../services';
-import { game as sql } from '../database/sql';
 
-const getGameService = (game: Game): GameService => {
+const getGameService = (game: Game, logger: Logger): GameService => {
   switch (game.type) {
     case GameType.X01:
-      return new X01Service(game, db, pgp);
+      return new X01Service(game, logger);
     case GameType.Legs:
-      return new LegsService(game, db, pgp);
+      return new LegsService(game, logger);
     case GameType.HalveIt:
-      return new HalveItService(game, db, pgp);
+      return new HalveItService(game, logger);
   }
 };
 
-export const gameService = async (ctx: Context, next: Function) => {
-  let game: Game;
+export const gameService = async (ctx, next) => {
+  const game = await db.game.findCurrent(ctx.state.userId);
 
-  try {
-    game = await db.one(sql.findCurrent, { userId: ctx.state.userId });
-  } catch (err) {
-    errorResponse(ctx, httpStatusCodes.NOT_FOUND);
+  if (!game) {
+    return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
   }
 
-  const service = getGameService(game);
-
-  ctx.state = { ...ctx.state, service };
+  ctx.state = { ...ctx.state, service: getGameService(game, ctx.logger) };
 
   return next();
 };

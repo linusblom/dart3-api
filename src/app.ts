@@ -4,17 +4,19 @@ import bodyParser from 'koa-bodyparser';
 import pino from 'pino';
 import { koaJwtSecret } from 'jwks-rsa';
 import jwt from 'koa-jwt';
+import helmet from 'koa-helmet';
 
 import { router } from './routes';
 import { error, logger } from './middlewares';
 
-const { PORT, AUTH0_AUDIENCE, AUTH0_URL } = process.env;
+const { PORT, AUTH0_AUDIENCE, AUTH0_URL, ALLOWED_ORIGIN } = process.env;
 const app = new Koa();
 
 app
-  .use(cors({ origin: '*', credentials: true }))
+  .use(helmet())
+  .use(cors({ origin: ALLOWED_ORIGIN, credentials: true }))
   .use((ctx, next) =>
-    next().catch(err => {
+    next().catch((err) => {
       if (err.status === 401) {
         ctx.status = 401;
         ctx.body = 'Unauthorized';

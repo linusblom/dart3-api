@@ -16,7 +16,8 @@ services:
       - AUTH0_CLIENT_SECRET=
       - AUTH0_URL=
       - AUTH0_AUDIENCE=
-      - JACKPOT_GEM=3/100
+      - ALLOWED_ORIGIN=http://localhost:4200
+      - LOG_LEVEL=debug
     image: dart3-api
     expose:
       - 8080

@@ -1,15 +1,13 @@
 import { Context } from 'koa';
-import { CreateTeamPlayer, Score, TeamPlayer } from 'dart3-sdk';
+import { CreateTeamPlayer, Score, StartGame } from 'dart3-sdk';
 import httpStatusCodes from 'http-status-codes';
 
 import { response, errorResponse } from '../utils';
-import { GameService, Auth0Service } from '../services';
+import { GameService } from '../services';
 import { db } from '../database';
 import { SQLErrorCode } from '../models';
 
 export class CurrentGameController {
-  constructor(private auth0 = Auth0Service.getInstance()) {}
-
   async get(ctx: Context, service: GameService) {
     if (service.game.startedAt) {
       return response(ctx, httpStatusCodes.OK, service.game);
@@ -24,17 +22,24 @@ export class CurrentGameController {
   }
 
   async delete(ctx: Context, service: GameService) {
-    try {
-      await db.game.delete(service.game.id);
+    const { id, bet } = service.game;
 
-      return response(ctx, httpStatusCodes.OK);
-    } catch (err) {
-      if (err.code === SQLErrorCode.ForeignKeyViolation) {
-        return errorResponse(ctx, httpStatusCodes.BAD_REQUEST);
-      }
+    await db.task(async (t) => {
+      const players = await t.teamPlayer.findByGameId(id);
 
-      throw err;
-    }
+      await Promise.all(
+        players.map(({ playerId }) => {
+          ctx.logger.info({ playerId, gameId: id, bet }, 'Player left game (by cancellation)');
+          return t.teamPlayer.delete(id, playerId, bet);
+        }),
+      );
+
+      await db.game.delete(id);
+    });
+
+    ctx.logger.info({ ...service.game }, 'Game canceled');
+
+    return response(ctx, httpStatusCodes.OK);
   }
 
   async createTeamPlayer(
@@ -43,15 +48,15 @@ export class CurrentGameController {
     userId: string,
     body: CreateTeamPlayer,
   ) {
-    let players: TeamPlayer[];
-
     try {
-      await db.task(async t => {
+      const players = await db.task(async (t) => {
         const player = await t.player.findIdByUid(userId, body.uid);
-        const { id, bet, type } = service.game;
+        const { id, bet } = service.game;
 
-        players = await t.teamPlayer.create(id, player.id, bet, type);
+        await t.teamPlayer.create(id, player.id, bet);
         ctx.logger.info({ playerId: player.id, gameId: id, bet }, 'Player joined game');
+
+        return await t.teamPlayer.findByGameId(id);
       });
 
       return response(ctx, httpStatusCodes.CREATED, { players });
@@ -68,41 +73,22 @@ export class CurrentGameController {
   }
 
   async deleteTeamPlayer(ctx: Context, service: GameService, uid: string, userId: string) {
-    let players: TeamPlayer[];
+    const players = await db.task(async (t) => {
+      const player = await t.player.findIdByUid(userId, uid);
+      const { id, bet } = service.game;
 
-    try {
-      await db.task(async t => {
-        const player = await t.player.findIdByUid(userId, uid);
-        const { id, bet, type } = service.game;
+      await t.teamPlayer.delete(id, player.id, bet);
+      ctx.logger.info({ playerId: player.id, gameId: id, bet }, 'Player left game');
 
-        players = await t.teamPlayer.delete(id, player.id, bet, type);
-        ctx.logger.info({ playerId: player.id, gameId: id, bet }, 'Player left game');
-      });
+      return await t.teamPlayer.findByGameId(id);
+    });
 
-      return response(ctx, httpStatusCodes.CREATED, { players });
-    } catch (err) {
-      return errorResponse(ctx, httpStatusCodes.BAD_REQUEST, err);
-    }
+    return response(ctx, httpStatusCodes.OK, { players });
   }
 
-  async start(ctx: Context, service: GameService, userId: string) {
+  async start(ctx: Context, service: GameService, body: StartGame) {
     try {
-      const prizePool = Number(service.game.prizePool);
-      const metaData = await this.auth0.getUserMetaData(ctx, userId);
-      const game = await service.start(metaData);
-
-      ctx.logger.info(
-        {
-          game,
-          fees: {
-            currency: metaData.currency,
-            jackpot: metaData.jackpotFee * prizePool,
-            nextJackpot: metaData.nextJackpotFee * prizePool,
-            rake: metaData.rake * prizePool,
-          },
-        },
-        'Start game',
-      );
+      await service.start(body);
 
       return response(ctx, httpStatusCodes.OK);
     } catch (err) {
@@ -111,7 +97,7 @@ export class CurrentGameController {
   }
 
   async getMatches(ctx: Context, service: GameService) {
-    return await db.task(async t => {
+    return await db.task(async (t) => {
       const { id } = service.game;
       const matches = await t.match.findByGameId(id);
       const teams = await t.matchTeam.findByGameId(id);
@@ -123,7 +109,7 @@ export class CurrentGameController {
 
   async createRound(ctx: Context, service: GameService, userId: string, body: Score[]) {
     const { gems, ...round } = await service.createRound(body);
-    const jackpotWinner = round.teams.find(t => t.gems >= 3 && !t.jackpotPaid);
+    const jackpotWinner = round.teams.find((t) => t.gems >= 3 && !t.jackpotPaid);
     let playerIds = [];
 
     if (jackpotWinner) {

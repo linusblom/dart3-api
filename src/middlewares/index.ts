@@ -5,3 +5,4 @@ export * from './pin';
 export * from './logger';
 export * from './game-service';
 export * from './game-started';
+export * from './admin';

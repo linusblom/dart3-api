@@ -1,8 +1,17 @@
-import { MatchTeam, Game, Match, RoundHit, TeamPlayer, MatchStatus, HitScore } from 'dart3-sdk';
+import {
+  MatchTeam,
+  Game,
+  Match,
+  RoundHit,
+  TeamPlayer,
+  MatchStatus,
+  HitScore,
+  DbId,
+} from 'dart3-sdk';
 
 export interface LegResults {
   data: LegData[];
-  matchTeams: MatchTeam[];
+  matchTeamIds: DbId[];
   endMatch: boolean;
   endSet: boolean;
 }
@@ -53,4 +62,16 @@ export interface NextMatchTeam {
   id: number;
   order: number;
   position: number;
+}
+
+export interface MatchResult {
+  id: number;
+  sets: number;
+}
+
+export interface MatchWinner {
+  id: number;
+  teamId: number;
+  position: number;
+  playerIds: number[];
 }

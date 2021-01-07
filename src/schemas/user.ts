@@ -4,7 +4,9 @@ export const updateUserSchema = Joi.object({
   name: Joi.string(),
   nickname: Joi.string(),
   email: Joi.string().email(),
-  userMetadata: Joi.object({
-    currency: Joi.string(),
+  metaData: Joi.object({
+    currency: Joi.string()
+      .min(1)
+      .max(5),
   }),
 });

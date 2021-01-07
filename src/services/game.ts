@@ -1,8 +1,9 @@
-import { Game, Score, TransactionType, MatchStatus, HitScore, MetaData } from 'dart3-sdk';
-import { IMain, IDatabase } from 'pg-promise';
+import { Game, Score, TransactionType, MatchStatus, HitScore, StartGame } from 'dart3-sdk';
+import { ITask } from 'pg-promise';
 import seedrandom from 'seedrandom';
+import { Logger } from 'pino';
 
-import * as sql from '../database/sql';
+import { db } from '../database';
 import {
   LegResults,
   MatchActive,
@@ -11,23 +12,18 @@ import {
   RoundScore,
   TeamPlayerPro,
 } from '../models';
+import { Extensions } from '../repositories';
 
 export abstract class GameService {
-  ColumnSet = this.pgp.helpers.ColumnSet;
-  update = this.pgp.helpers.update;
-  insert = this.pgp.helpers.insert;
+  tx: ITask<Extensions> & Extensions;
+  active: MatchActive;
   gems: boolean[] = [];
 
-  constructor(public game: Game, protected db: IDatabase<any>, protected pgp: IMain) {}
+  constructor(public game: Game, protected logger: Logger) {}
 
-  abstract getRoundScore(scores: Score[], active: MatchActive, tx): Promise<RoundScore>;
-  abstract getLegResults(active: MatchActive, tx): Promise<LegResults>;
-  abstract next(
-    nextTeam: NextMatchTeam,
-    nextRound: boolean,
-    active: MatchActive,
-    tx,
-  ): Promise<RoundResults>;
+  abstract getRoundScore(scores: Score[]): Promise<RoundScore>;
+  abstract getLegResults(): Promise<LegResults>;
+  abstract next(nextTeam: NextMatchTeam, nextRound: boolean): Promise<RoundResults>;
 
   protected getDartTotal(score: Score) {
     return score.value * score.multiplier;
@@ -56,137 +52,118 @@ export abstract class GameService {
       .sort(arrayRandomizer);
   }
 
-  private getFractionParts(fraction: string) {
-    return {
-      numerator: +fraction.substr(0, fraction.indexOf('/')),
-      denominator: +fraction.substr(fraction.indexOf('/') + 1),
-    };
-  }
+  async start(payload: StartGame) {
+    this.game = { ...this.game, ...payload };
 
-  async start({ jackpotFee, nextJackpotFee, rake }: MetaData) {
-    return this.db.tx(async tx => {
-      const { id: gameId, team, tournament } = this.game;
-      const players = await tx.any(sql.teamPlayer.findByGameIdWithPro, { gameId });
-
-      if (tournament) {
+    return db.tx(async (tx) => {
+      if (payload.tournament) {
         throw new Error('Tournament not implemented.');
       }
 
-      if (team && (players.length % 2 !== 0 || players.length < 4)) {
+      const players = await tx.teamPlayer.findByGameIdWithPro(this.game.id);
+      const minPlayers = (payload.tournament ? 4 : 2) * (payload.team ? 2 : 1);
+      const maxPlayers = (payload.tournament ? 32 : 8) * (payload.team ? 2 : 1);
+
+      if (
+        players.length < minPlayers ||
+        players.length > maxPlayers ||
+        (payload.team && players.length % 2 !== 0)
+      ) {
         throw new Error('Incorrect player count.');
       }
 
       const teamPlayerIds = this.randomizeOrder(players);
-      const teamData = teamPlayerIds.map(() => ({ game_id: gameId }));
-      const teamCs = new this.ColumnSet(['game_id'], { table: 'team' });
-      const teamIds = await tx.any(`${this.insert(teamData, teamCs)} RETURNING id`);
+      const teamIds = await tx.team.create(teamPlayerIds, this.game.id);
+      await tx.teamPlayer.updateTeamIds(teamPlayerIds, teamIds);
 
-      const teamPlayerData = teamPlayerIds.reduce(
-        (acc, ids, index) => [
-          ...acc,
-          ...ids.map(id => ({ id, team_id: teamIds[index].id, xp: 100 })),
-        ],
-        [],
-      );
-      const teamPlayerCs = new this.ColumnSet(['?id', 'team_id', 'xp'], { table: 'team_player' });
-      await tx.none(`${this.update(teamPlayerData, teamPlayerCs)} WHERE v.id = t.id`);
+      const matchIds = await tx.match.create(this.game.id);
+      const matchTeamIds = await tx.matchTeam.create(matchIds, teamIds);
+      await tx.matchTeamLeg.create(matchTeamIds, this.game.startScore);
 
-      const matchIds = await tx.any(sql.match.create, {
-        gameId,
-        status: MatchStatus.Pending,
-        stage: 1,
-      });
+      const meta = await tx.userMeta.findById(this.game.userId);
 
-      const matchTeamData = teamIds.map(({ id }, index) => ({
-        match_id: matchIds[0].id,
-        team_id: id,
-        order: index + 1,
-      }));
-      const matchTeamCs = new this.ColumnSet(['match_id', 'team_id', 'order'], {
-        table: 'match_team',
-      });
-      const matchTeamIds = await tx.any(`${this.insert(matchTeamData, matchTeamCs)} RETURNING id`);
-
-      const matchTeamLegData = matchTeamIds.map(({ id }) => ({
-        match_team_id: id,
-        set: 1,
-        leg: 1,
-        score: this.game.startScore,
-      }));
-      const matchTeamLegCs = new this.ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
-        table: 'match_team_leg',
-      });
-      await tx.none(`${this.insert(matchTeamLegData, matchTeamLegCs)}`);
-
-      if (rake > 0) {
-        await tx.none(sql.invoice.debit, { gameId, rake: rake });
+      if (meta.rake > 0) {
+        await tx.invoice.debit(this.game.id, meta);
       }
 
-      await tx.none(sql.match.start, {
-        matchTeamId: matchTeamIds[0].id,
-        id: matchIds[0].id,
-        status: this.game.random ? MatchStatus.Playing : MatchStatus.Order,
-      });
-      await tx.none(sql.jackpot.increaseByGameId, {
-        gameId,
-        fee: jackpotFee,
-        nextFee: nextJackpotFee,
-      });
-      const game = await tx.one(sql.game.start, {
-        id: gameId,
-        fee: jackpotFee + nextJackpotFee + rake,
-      });
+      const status = this.game.random ? MatchStatus.Playing : MatchStatus.Order;
 
-      return game;
+      await tx.match.start(matchIds[0].id, matchTeamIds[0].id, status);
+      await tx.jackpot.increaseByGameId(this.game.id, meta);
+      await tx.game.start(this.game.id, payload, meta);
+
+      this.logger.info(
+        {
+          gameId: this.game.id,
+          uid: this.game.uid,
+          jackpotFee: `${meta.currency} ${+this.game.prizePool * meta.jackpotFee}`,
+          nextJackpotFee: `${meta.currency} ${+this.game.prizePool * meta.nextJackpotFee}`,
+          rake: `${meta.currency} ${+this.game.prizePool * meta.rake}`,
+        },
+        'Game started',
+      );
     });
   }
 
-  async updateGems(scores: HitScore[], active: MatchActive, tx) {
-    if (active.set === 1 && active.leg === 1 && active.round <= 3) {
+  async createRound(scores: Score[]) {
+    return db.tx(async (tx) => {
+      this.active = await tx.match.findActiveByGameId(this.game.id);
+      this.tx = tx;
+
+      return this.registerScore(scores);
+    });
+  }
+
+  async registerScore(scores: Score[]) {
+    if (this.active.status === MatchStatus.Order) {
+      return this.nearestBullOrder(scores);
+    }
+
+    const roundScore = await this.getRoundScore(scores);
+
+    await this.tx.hit.create(this.active, roundScore.scores);
+    await this.updateGems(roundScore.scores);
+    await this.tx.teamPlayer.updateXp(this.active, roundScore.totalScore);
+    await this.tx.matchTeamLeg.updateScore(this.active, roundScore.nextScore);
+
+    const { nextTeam, nextRound } = await this.checkNext();
+
+    return this.next(nextTeam, nextRound);
+  }
+
+  async updateGems(scores: HitScore[]) {
+    if (this.active.set === 1 && this.active.leg === 1 && this.active.round <= 3) {
+      const metaData = await this.tx.userMeta.findById(this.game.userId);
       const rng = seedrandom();
-      const { numerator, denominator } = this.getFractionParts(process.env.JACKPOT_GEM);
 
-      this.gems = scores.map(
-        score => score.value > 0 && Math.floor(rng() * denominator) < numerator,
+      this.gems = scores.map((score) => score.value > 0 && rng() < metaData.gemChance);
+
+      await this.tx.matchTeam.updateGems(
+        this.active.matchTeamId,
+        this.gems.filter((gem) => gem).length,
       );
-
-      await tx.none(sql.matchTeam.updateGems, {
-        gems: this.gems.filter(gem => gem).length,
-        id: active.matchTeamId,
-      });
     }
   }
 
-  async nearestBullOrder(active: MatchActive, scores: Score[], tx) {
-    const matchTeams = await tx.any(sql.matchTeam.findByMatchIdWithOrder, {
-      matchId: active.matchId,
-    });
-    const mtData = matchTeams
+  async nearestBullOrder(scores: Score[]) {
+    const matchTeams = await this.tx.matchTeam.findByMatchIdWithOrder(this.active.matchId);
+
+    const order = matchTeams
       .map(({ id }, index) => ({ id, ...scores[index] }))
       .sort(
         (a, b) =>
-          a.bullDistance - b.bullDistance || b.score - a.score || b.multiplier - a.multiplier,
+          a.bullDistance - b.bullDistance || b.value - a.value || b.multiplier - a.multiplier,
       )
       .map(({ id }, index) => ({ id, order: index + 1 }));
-    const mtCs = new this.ColumnSet(['?id', 'order'], { table: 'match_team' });
-    await tx.none(`${this.update(mtData, mtCs)} WHERE v.id = t.id`);
 
-    await tx.none(sql.match.start, {
-      matchTeamId: mtData[0].id,
-      id: active.matchId,
-      status: MatchStatus.Playing,
-    });
+    await this.tx.matchTeam.updateOrder(order);
+    await this.tx.match.start(this.active.matchId, order[0].id, MatchStatus.Playing);
 
-    return this.roundResponse(active, tx);
+    return this.roundResponse();
   }
 
-  async checkNext(active: MatchActive, tx) {
-    const nextOrder = await tx.any(sql.matchTeam.findNextOrder, {
-      order: active.order,
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-    });
+  async checkNext() {
+    const nextOrder = await this.tx.matchTeam.findNextOrder(this.active);
 
     return nextOrder.reduce(
       (acc, team) => {
@@ -196,7 +173,7 @@ export abstract class GameService {
 
         let nextRound = acc.nextRound;
 
-        if (team.order === active.startOrder) {
+        if (team.order === this.active.startOrder) {
           nextRound = true;
         }
 
@@ -206,95 +183,22 @@ export abstract class GameService {
     );
   }
 
-  async createRound(scores: Score[]) {
-    return this.db.tx(async tx => {
-      const active = await tx.one(sql.match.findActiveByGameId, { gameId: this.game.id });
+  protected async nextMatchTeam(nextTeam: NextMatchTeam) {
+    await this.tx.match.nextMatchTeam(this.active.matchId, nextTeam.id);
 
-      if (active.status === MatchStatus.Order) {
-        return this.nearestBullOrder(active, scores, tx);
-      }
-
-      const roundScore = await this.getRoundScore(scores, active, tx);
-
-      await this.updateGems(roundScore.scores, active, tx);
-
-      const mtData = roundScore.scores.map((score, index) => ({
-        match_team_id: active.matchTeamId,
-        player_id: active.playerId,
-        dart: index + 1,
-        round: active.round,
-        leg: active.leg,
-        set: active.set,
-        value: score.value,
-        multiplier: score.multiplier,
-        approved: score.approved,
-        target: score.target,
-        type: score.type,
-      }));
-      const mtCs = new this.ColumnSet(
-        [
-          'match_team_id',
-          'player_id',
-          'dart',
-          'round',
-          'leg',
-          'set',
-          'value',
-          'multiplier',
-          'approved',
-          'target',
-          'type',
-        ],
-        { table: 'hit' },
-      );
-      await tx.none(this.insert(mtData, mtCs));
-
-      await tx.none(sql.teamPlayer.updateXp, {
-        xp: roundScore.totalScore,
-        teamId: active.teamId,
-        playerId: active.playerId,
-      });
-      await tx.none(sql.matchTeamLeg.updateScore, {
-        score: roundScore.nextScore,
-        matchTeamId: active.matchTeamId,
-        set: active.set,
-        leg: active.leg,
-      });
-
-      const { nextTeam, nextRound } = await this.checkNext(active, tx);
-
-      return this.next(nextTeam, nextRound, active, tx);
-    });
+    return this.roundResponse();
   }
 
-  protected async nextMatchTeam(nextTeam: NextMatchTeam, active: MatchActive, tx) {
-    await tx.none(sql.match.nextMatchTeam, { matchTeamId: nextTeam.id, id: active.matchId });
+  async nextRound(nextTeam: NextMatchTeam) {
+    await this.tx.match.nextRound(this.active.matchId, nextTeam.id);
 
-    return this.roundResponse(active, tx);
+    return this.roundResponse();
   }
 
-  async nextRound(nextTeam: NextMatchTeam, active: MatchActive, tx) {
-    await tx.none(sql.match.nextRound, { matchTeamId: nextTeam.id, id: active.matchId });
-
-    return this.roundResponse(active, tx);
-  }
-
-  protected async roundResponse(active: MatchActive, tx, game?: Game) {
-    const match = await tx.one(sql.match.findByIdOnlyActive, { id: active.matchId });
-
-    const teams = await tx.any(sql.matchTeam.findByMatchIdWithLeg, {
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-      orderBy: 'ORDER BY d.order',
-    });
-
-    const hits = await tx.any(sql.hit.findRoundHitsBySetLegRoundAndMatchId, {
-      matchId: active.matchId,
-      set: active.set,
-      leg: active.leg,
-      round: active.round,
-    });
+  protected async roundResponse(game?: Partial<Game>) {
+    const match = await this.tx.match.findByIdOnlyActive(this.active.matchId);
+    const teams = await this.tx.matchTeam.findByMatchIdWithLeg(this.active, ['order']);
+    const hits = await this.tx.hit.findRoundHitsBySetLegRoundAndMatchId(this.active);
 
     return {
       ...(game && { game }),
@@ -305,127 +209,68 @@ export abstract class GameService {
     };
   }
 
-  protected async nextLeg(active: MatchActive, tx) {
-    const legResults = await this.getLegResults(active, tx);
+  protected async nextLeg() {
+    const legResults = await this.getLegResults();
 
-    const mtlUpdateCs = new this.ColumnSet(
-      [
-        '?match_team_id',
-        '?set',
-        '?leg',
-        'leg_win',
-        'set_win',
-        'position',
-        { name: 'ended_at', mod: '^', def: 'CURRENT_TIMESTAMP' },
-      ],
-      { table: 'match_team_leg' },
-    );
-    await tx.none(
-      `${this.update(
-        legResults.data,
-        mtlUpdateCs,
-      )} WHERE v.match_team_id = t.match_team_id AND v.set = t.set AND v.leg = t.leg`,
-    );
+    await this.tx.matchTeamLeg.updateResults(legResults.data);
 
     if (legResults.endMatch) {
-      return this.endMatch(active, tx);
+      return this.endMatch();
     }
 
     const { leg, set } = legResults.endSet
-      ? { leg: 1, set: active.set + 1 }
-      : { leg: active.leg + 1, set: active.set };
+      ? { leg: 1, set: this.active.set + 1 }
+      : { leg: this.active.leg + 1, set: this.active.set };
 
-    const mtlInsertData = legResults.matchTeams.map(({ id }) => ({
-      match_team_id: id,
-      set,
-      leg,
-      score: this.game.startScore,
-    }));
-    const mtlInsertCs = new this.ColumnSet(['match_team_id', 'set', 'leg', 'score'], {
-      table: 'match_team_leg',
-    });
-    await tx.none(`${this.insert(mtlInsertData, mtlInsertCs)}`);
+    await this.tx.matchTeamLeg.create(legResults.matchTeamIds, this.game.startScore, set, leg);
 
     const startOrder =
-      active.startOrder + 1 > legResults.matchTeams.length ? 1 : active.startOrder + 1;
+      this.active.startOrder + 1 > legResults.matchTeamIds.length ? 1 : this.active.startOrder + 1;
 
-    const first = await tx.one(sql.matchTeam.findByMatchIdAndOrder, {
-      matchId: active.matchId,
-      order: startOrder,
-    });
-    await tx.none(sql.match.nextLeg, {
-      matchTeamId: first.id,
-      leg,
-      set,
-      id: active.matchId,
-      startOrder,
-    });
+    const first = await this.tx.matchTeam.findByMatchIdAndOrder(this.active.matchId, startOrder);
+    await this.tx.match.nextLeg(this.active.matchId, first.id, set, leg, startOrder);
 
-    return this.roundResponse(active, tx);
+    return this.roundResponse();
   }
 
-  protected async endMatch(active: MatchActive, tx) {
-    await tx.none(sql.match.endById, { id: active.matchId });
+  protected async endMatch() {
+    await this.tx.match.end(this.active.matchId);
 
-    const results = await tx.any(sql.matchTeam.findResults, { matchId: active.matchId });
-    const mtData = results.reduce((acc, team, index, array) => {
-      let position = index + 1;
+    const results = await this.tx.matchTeam.findResultsByMatchId(this.active.matchId);
+    await this.tx.matchTeam.updatePosition(results);
 
-      if (team.sets === array[0].sets) {
-        position = 1;
-      } else if (team.sets === array[index - 1].sets) {
-        position = acc[index - 1].position;
-      }
-
-      return [...acc, { id: team.id, position }];
-    }, []);
-    const mtCs = new this.ColumnSet(['?id', 'position'], { table: 'match_team' });
-    await tx.none(`${this.update(mtData, mtCs)} WHERE v.id = t.id`);
-
-    return this.endGame(active, tx);
+    return this.endGame();
   }
 
-  protected async endGame(active: MatchActive, tx) {
-    const game = await tx.one(sql.game.endById, { id: this.game.id });
-    const winners = await tx.any(sql.matchTeam.findWinners, { matchId: active.matchId });
+  protected async endGame() {
+    await this.tx.game.end(this.game.id);
+    const results = await this.tx.matchTeam.findWinnersByMatchId(this.active.matchId);
 
     await Promise.all(
-      winners
-        .filter(team => team.position === 1)
+      results
+        .filter((team) => team.position === 1)
         .reduce((acc, { playerIds }) => [...acc, ...playerIds], [])
         .map(async (playerId, _, array) => {
-          const win = game.prizePool / array.length;
+          const win = +this.game.prizePool / array.length;
 
-          await tx.one(sql.transaction.credit, {
-            playerId,
+          await this.tx.transaction.credit(playerId, TransactionType.Win, {
             description: `Winner game #${this.game.id}`,
-            type: TransactionType.Win,
             amount: win,
           });
-
-          await tx.none(sql.teamPlayer.updateWinXp, {
-            win,
-            xp: 1000,
-            playerId,
-            gameId: this.game.id,
-          });
+          await this.tx.teamPlayer.updateWin(this.game.id, playerId, win);
 
           return Promise.resolve();
         }),
     );
 
     await Promise.all(
-      winners
+      results
         .reduce((acc, { playerIds }) => [...acc, ...playerIds], [])
-        .map(async playerId =>
-          tx.none(sql.player.updateXp, { id: playerId, gameId: this.game.id }),
-        ),
+        .map(async (playerId) => this.tx.player.updateXp(playerId, this.game.id)),
     );
 
-    const teamData = winners.map(({ teamId, position }) => ({ id: teamId, position }));
-    const teamCs = new this.ColumnSet(['?id', 'position'], { table: 'team' });
-    await tx.none(`${this.update(teamData, teamCs)} WHERE v.id = t.id`);
+    await this.tx.team.updatePosition(results);
 
-    return this.roundResponse(active, tx, game);
+    return this.roundResponse({ id: this.game.id, endedAt: new Date().toISOString() });
   }
 }
