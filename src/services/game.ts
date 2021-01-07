@@ -86,7 +86,9 @@ export abstract class GameService {
         await tx.invoice.debit(this.game.id, meta);
       }
 
-      await tx.match.start(matchIds[0].id, matchTeamIds[0].id, this.game.random);
+      const status = this.game.random ? MatchStatus.Playing : MatchStatus.Order;
+
+      await tx.match.start(matchIds[0].id, matchTeamIds[0].id, status);
       await tx.jackpot.increaseByGameId(this.game.id, meta);
       await tx.game.start(this.game.id, payload, meta);
 
@@ -155,7 +157,7 @@ export abstract class GameService {
       .map(({ id }, index) => ({ id, order: index + 1 }));
 
     await this.tx.matchTeam.updateOrder(order);
-    await this.tx.match.start(this.active.matchId, order[0].id);
+    await this.tx.match.start(this.active.matchId, order[0].id, MatchStatus.Playing);
 
     return this.roundResponse();
   }

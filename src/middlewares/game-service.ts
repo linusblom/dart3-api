@@ -21,7 +21,7 @@ export const gameService = async (ctx, next) => {
   const game = await db.game.findCurrent(ctx.state.userId);
 
   if (!game) {
-    errorResponse(ctx, httpStatusCodes.NOT_FOUND);
+    return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
   }
 
   ctx.state = { ...ctx.state, service: getGameService(game, ctx.logger) };

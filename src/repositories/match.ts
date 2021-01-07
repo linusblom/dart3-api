@@ -19,9 +19,7 @@ export class MatchRepository {
     return await this.db.any<DbId>(sql.create, { gameId, status: MatchStatus.Pending, stage: 1 });
   }
 
-  async start(id: number, matchTeamId: number, random = false) {
-    const status = random ? MatchStatus.Playing : MatchStatus.Order;
-
+  async start(id: number, matchTeamId: number, status: MatchStatus) {
     await this.db.none(sql.start, { matchTeamId, id, status });
   }
 
