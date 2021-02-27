@@ -9,7 +9,7 @@ import helmet from 'koa-helmet';
 import { router } from './routes';
 import { error, logger } from './middlewares';
 
-const { PORT, AUTH0_AUDIENCE, AUTH0_URL, ALLOWED_ORIGIN } = process.env;
+const { PORT, AUTH0_AUDIENCE, AUTH0_DOMAIN, ALLOWED_ORIGIN } = process.env;
 const app = new Koa();
 
 app
@@ -28,13 +28,13 @@ app
   .use(
     jwt({
       secret: koaJwtSecret({
-        jwksUri: `${AUTH0_URL}/.well-known/jwks.json`,
+        jwksUri: `https://${AUTH0_DOMAIN}/.well-known/jwks.json`,
         cache: true,
         cacheMaxEntries: 5,
         cacheMaxAge: 36000000,
       }),
       algorithms: ['RS256'],
-      issuer: [`${AUTH0_URL}/`],
+      issuer: [`https://${AUTH0_DOMAIN}/`],
       audience: [AUTH0_AUDIENCE],
     }).unless({ path: [/^\/v1\/ping$/] }),
   )
