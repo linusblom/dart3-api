@@ -828,10 +828,10 @@ crypto-random-string@^2.0.0:
   resolved "https://registry.yarnpkg.com/crypto-random-string/-/crypto-random-string-2.0.0.tgz#ef2a7a966ec11083388369baa02ebead229b30d5"
   integrity sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==
 
-dart3-sdk@^0.3.31:
-  version "0.3.31"
-  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.3.31.tgz#7f77d1034c1693dcabc7880a4138d601000cde2d"
-  integrity sha512-tuhaw/wieICAndtti9YwMxV8te9vZ9dJNuxLI7S1/wj1hXImLzgCzcfuOiPYrsQB9nRW4OPYrJzfm/bfasGp3g==
+dart3-sdk@^0.3.39:
+  version "0.3.39"
+  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.3.39.tgz#48f9f261b8e1af5b915ad9af9e1c9d886e87f9b2"
+  integrity sha512-RKYiek6IxlyKqgAtiyECvdSjozVX/8UPs9VGIjrQWemYU4sKd8z7dys2aF13zt5TNVpY+fPXDggVN0JjUCoXKg==
 
 data-uri-to-buffer@3:
   version "3.0.1"

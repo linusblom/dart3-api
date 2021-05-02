@@ -1,8 +1,9 @@
 import Router from 'koa-router';
 
 import { PlayerController } from '../controllers';
-import { validate, pin, admin } from '../middlewares';
-import { createPlayerSchema, updatePlayerSchema, transactionSchema } from '../schemas';
+import { validate, pin } from '../middlewares';
+import { createPlayerSchema, updatePlayerSchema } from '../schemas';
+import transaction from './transaction';
 
 const router = new Router();
 const ctrl = new PlayerController();
@@ -20,44 +21,21 @@ router
     validate(updatePlayerSchema),
     async (ctx) => await ctrl.update(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
   )
+  .get('/:uid/statistics', async (ctx) => ctrl.statistics(ctx, ctx.state.userId, ctx.params.uid))
   .patch(
     '/:uid/reset-pin',
     async (ctx) => await ctrl.resetPin(ctx, ctx.state.userId, ctx.params.uid),
   )
   .patch(
     '/:uid/disable-pin',
-    pin(false),
+    pin(),
     async (ctx) => await ctrl.disablePin(ctx, ctx.state.userId, ctx.params.uid),
   )
-  .delete(
-    '/:uid',
-    pin(false),
-    async (ctx) => await ctrl.delete(ctx, ctx.state.userId, ctx.params.uid),
-  )
   .post(
-    '/:uid/deposit',
-    admin,
-    validate(transactionSchema),
-    async (ctx) => await ctrl.deposit(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
+    '/:uid/verify',
+    async (ctx) => await ctrl.sendEmailVerification(ctx, ctx.state.userId, ctx.params.uid),
   )
-  .post(
-    '/:uid/withdrawal',
-    admin,
-    validate(transactionSchema),
-    async (ctx) => await ctrl.withdrawal(ctx, ctx.state.userId, ctx.params.uid, ctx.request.body),
-  )
-  .post(
-    '/:uid/transfer/:receiverUid',
-    pin(true),
-    validate(transactionSchema),
-    async (ctx) =>
-      await ctrl.transfer(
-        ctx,
-        ctx.state.userId,
-        ctx.params.uid,
-        ctx.params.receiverUid,
-        ctx.request.body,
-      ),
-  );
+  .delete('/:uid', pin(), async (ctx) => await ctrl.delete(ctx, ctx.state.userId, ctx.params.uid))
+  .use('/:uid/transaction', transaction.routes(), transaction.allowedMethods());
 
 export default router;

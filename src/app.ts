@@ -2,42 +2,19 @@ import Koa from 'koa';
 import cors from '@koa/cors';
 import bodyParser from 'koa-bodyparser';
 import pino from 'pino';
-import { koaJwtSecret } from 'jwks-rsa';
-import jwt from 'koa-jwt';
 import helmet from 'koa-helmet';
 
-import { router } from './routes';
-import { error, logger } from './middlewares';
+import router from './routes';
+import { error, logger, authError, jwt } from './middlewares';
 
-const { PORT, AUTH0_AUDIENCE, AUTH0_DOMAIN, ALLOWED_ORIGIN } = process.env;
+const { PORT, CLIENT_URL } = process.env;
 const app = new Koa();
 
 app
   .use(helmet())
-  .use(cors({ origin: ALLOWED_ORIGIN, credentials: true }))
-  .use((ctx, next) =>
-    next().catch((err) => {
-      if (err.status === 401) {
-        ctx.status = 401;
-        ctx.body = 'Unauthorized';
-      } else {
-        throw err;
-      }
-    }),
-  )
-  .use(
-    jwt({
-      secret: koaJwtSecret({
-        jwksUri: `https://${AUTH0_DOMAIN}/.well-known/jwks.json`,
-        cache: true,
-        cacheMaxEntries: 5,
-        cacheMaxAge: 36000000,
-      }),
-      algorithms: ['RS256'],
-      issuer: [`https://${AUTH0_DOMAIN}/`],
-      audience: [AUTH0_AUDIENCE],
-    }).unless({ path: [/^\/v1\/ping$/] }),
-  )
+  .use(cors({ origin: CLIENT_URL, credentials: true }))
+  .use(authError)
+  .use(jwt)
   .use(logger)
   .use(error)
   .use(bodyParser())

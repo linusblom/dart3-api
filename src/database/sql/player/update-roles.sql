@@ -1,0 +1,1 @@
+UPDATE player SET roles = ${roles} WHERE uid = ${uid} AND user_id = ${userId}

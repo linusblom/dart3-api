@@ -1,3 +1,3 @@
 UPDATE player
-SET name = ${name}, pro = ${pro}, double = ${double}, avatar = ${avatar}
+SET name = ${name}, single = ${single}, double = ${double}, triple = ${triple}, avatar = ${avatar}
 WHERE user_id = ${userId} AND uid = ${uid} AND deleted_at IS NULL

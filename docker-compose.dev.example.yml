@@ -8,7 +8,7 @@ services:
     environment:
       - PORT=8080
       - ENV=development
-      - DATABASE_URL=postgres://dart3:dart3@database:5432/dart3
+      - DATABASE_URL=postgres://postgres:dart3@database:5433/dart3
       - AWS_ACCESS_KEY=
       - AWS_SECRET_KEY=
       - AWS_REGION=
@@ -16,7 +16,7 @@ services:
       - AUTH0_CLIENT_SECRET=
       - AUTH0_DOMAIN=
       - AUTH0_AUDIENCE=
-      - ALLOWED_ORIGIN=http://localhost:4200
+      - CLIENT_URL=http://localhost:4200
       - LOG_LEVEL=debug
     image: dart3-api
     expose:
@@ -27,20 +27,33 @@ services:
     volumes:
       - .:/app
       - ./nodemon.json:/app/nodemon.json
+    links:
+      - migration
+    depends_on:
+      - migration
+    command: yarn start
+
+  migration:
+    build:
+      context: .
+      dockerfile: docker/migration.dockerfile
+    image: dart3-migration
+    links:
+      - database
     depends_on:
       - database
-    command: yarn start
+    command: pg-migrator postgres://postgres:dart3@database:5432/dart3
+
   database:
     image: postgres:11.8
     environment:
-      POSTGRES_DB: dart3
+      POSTGRES_DB: postgres
       POSTGRES_USER: dart3
       POSTGRES_PASSWORD: dart3
     volumes:
-      - ./sql:/docker-entrypoint-initdb.d/
       - dart3_dbdata:/var/lib/postgresql/data/
     ports:
-      - 5432:5432
+      - 5433:5433
 
 volumes:
   dart3_dbdata:

@@ -1,11 +1,17 @@
 import AWS from 'aws-sdk';
 
 const ses = new AWS.SES({ region: 'eu-west-1' });
+const { ENV, CLIENT_URL } = process.env;
 
 export const sendEmail = async (
   to: string,
   message: { subject: string; body: string; text: string },
 ) => {
+  if (ENV === 'development') {
+    console.debug(message.text);
+    return Promise.resolve();
+  }
+
   const params = {
     Destination: {
       ToAddresses: [to],
@@ -30,7 +36,7 @@ export const sendEmail = async (
     Source: 'noreply@dart3.app',
   };
 
-  return await ses.sendEmail(params).promise();
+  return ses.sendEmail(params).promise();
 };
 
 export const generateWelcomeEmail = (name: string, pin: string) => ({
@@ -49,4 +55,10 @@ export const generateDisablePinEmail = (name: string) => ({
   subject: 'PIN code disabled',
   body: `<h2>Hi ${name}!</h2>Your PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.`,
   text: `Hi ${name}!\nYour PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.`,
+});
+
+export const generateVerificationEmail = (name: string, uid: string, token: string) => ({
+  subject: 'Verify your email',
+  body: `<h2>Hi ${name}!</h2>Please click this link to verify your email: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours.`,
+  text: `Hi ${name}!\nPlease click this link to verify your email: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours.`,
 });

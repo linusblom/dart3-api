@@ -1,0 +1,1 @@
+DELETE FROM player_email_verification WHERE uid = ${uid}

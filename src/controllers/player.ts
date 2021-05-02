@@ -1,12 +1,6 @@
 import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
-import {
-  CreatePlayer,
-  UpdatePlayer,
-  CreateTransaction,
-  GRAVATAR,
-  TransactionType,
-} from 'dart3-sdk';
+import { CreatePlayer, UpdatePlayer, GRAVATAR, Role } from 'dart3-sdk';
 import md5 from 'md5';
 
 import { randomColor, generatePin, response, errorResponse } from '../utils';
@@ -15,13 +9,12 @@ import {
   generateResetPinEmail,
   generateWelcomeEmail,
   generateDisablePinEmail,
+  generateVerificationEmail,
 } from '../aws';
 import { db } from '../database';
-import { SQLErrorCode } from '../models';
+import { nanoid } from 'nanoid';
 
 export class PlayerController {
-  constructor() {}
-
   async get(ctx: Context, userId: string) {
     const players = await db.player.all(userId);
 
@@ -30,43 +23,37 @@ export class PlayerController {
 
   async getByUid(ctx: Context, userId: string, uid: string) {
     try {
-      return db.task(async (t) => {
-        const player = await t.player.findByUid(userId, uid);
-        const transactions = await t.transaction.findByPlayerId(player.id);
-        const statistics = await t.player.findStatisticsById(player.id);
-
-        return response(ctx, httpStatusCodes.OK, { ...player, transactions, statistics });
-      });
+      const player = await db.player.findByUid(userId, uid);
+      return response(ctx, httpStatusCodes.OK, player);
     } catch (err) {
       return errorResponse(ctx, httpStatusCodes.NOT_FOUND);
     }
   }
 
-  async create(ctx: Context, userId: string, body: CreatePlayer) {
-    const dev = process.env.ENV === 'development';
+  async create(ctx: Context, userId: string, payload: CreatePlayer) {
     const color = randomColor();
-    const avatar = `https://s.gravatar.com/avatar/${md5(body.email)}?d=identicon`;
-    const pin = dev ? '1111' : generatePin();
+    const avatar = `https://s.gravatar.com/avatar/${md5(payload.email)}?d=identicon`;
+    const pin = generatePin();
 
-    const player = await db.player.create(userId, body, color, avatar, pin);
+    const player = await db.player.create(userId, payload, color, avatar, pin);
 
-    if (!dev) {
-      await sendEmail(body.email, generateWelcomeEmail(body.name, pin));
-    }
+    await sendEmail(payload.email, generateWelcomeEmail(payload.name, pin));
 
-    return response(ctx, httpStatusCodes.CREATED, { ...player, transactions: [] });
+    return response(ctx, httpStatusCodes.CREATED, player);
   }
 
-  async update(ctx: Context, userId: string, uid: string, body: UpdatePlayer) {
+  async update(ctx: Context, userId: string, uid: string, payload: UpdatePlayer) {
     return db.task(async (t) => {
-      let avatar = body.avatar;
+      let avatar = payload.avatar;
 
       if (avatar === GRAVATAR) {
-        const player = await t.player.findByUid(userId, uid);
-        avatar = `https://s.gravatar.com/avatar/${md5(player.email)}?d=identicon`;
+        const { email } = await t.player.findByUid(userId, uid);
+        avatar = `https://s.gravatar.com/avatar/${md5(email)}?d=identicon`;
       }
 
-      await t.player.update(userId, uid, { ...body, avatar });
+      await t.player.toggleRoles(userId, uid, payload.roles, [Role.Pro]);
+      await t.player.update(userId, uid, { ...payload, avatar });
+
       const player = await t.player.findByUid(userId, uid);
 
       return response(ctx, httpStatusCodes.OK, player);
@@ -90,9 +77,9 @@ export class PlayerController {
 
   async disablePin(ctx: Context, userId: string, uid: string) {
     return db.task(async (t) => {
-      await t.player.disablePin(userId, uid);
-      const player = await t.player.findByUid(userId, uid);
+      await t.player.toggleRoles(userId, uid, [], [Role.Pin]);
 
+      const player = await t.player.findByUid(userId, uid);
       await sendEmail(player.email, generateDisablePinEmail(player.name));
 
       ctx.logger.info({ uid: player.uid }, 'Disable PIN');
@@ -117,55 +104,21 @@ export class PlayerController {
     });
   }
 
-  async deposit(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
-    return db.task(async (t) => {
-      const player = await t.player.findIdByUid(userId, uid);
-      const transaction = await t.transaction.credit(player.id, TransactionType.Deposit, body);
+  async statistics(ctx: Context, userId: string, uid: string) {
+    const statistics = await db.player.findStatisticsByUid(userId, uid);
 
-      ctx.logger.info({ to: uid, ...body }, 'Deposit');
+    return response(ctx, httpStatusCodes.OK, statistics);
+  }
 
-      return response(ctx, httpStatusCodes.OK, transaction);
+  async sendEmailVerification(ctx: Context, userId: string, uid: string) {
+    return db.tx(async (t) => {
+      const player = await t.player.findByUid(userId, uid);
+      const token = nanoid(64);
+      await t.player.createEmailVerification(uid, token);
+
+      await sendEmail(player.email, generateVerificationEmail(player.name, uid, token));
+
+      return response(ctx, httpStatusCodes.OK);
     });
-  }
-
-  async withdrawal(ctx: Context, userId: string, uid: string, body: CreateTransaction) {
-    try {
-      return db.task(async (t) => {
-        const player = await t.player.findIdByUid(userId, uid);
-        const transaction = await t.transaction.debit(player.id, TransactionType.Withdrawal, body);
-
-        ctx.logger.info({ from: uid, ...body }, 'Withdrawal');
-
-        return response(ctx, httpStatusCodes.OK, transaction);
-      });
-    } catch (err) {
-      if (err.code === SQLErrorCode.CheckViolation) {
-        return errorResponse(ctx, httpStatusCodes.NOT_ACCEPTABLE);
-      }
-
-      throw err;
-    }
-  }
-
-  async transfer(
-    ctx: Context,
-    userId: string,
-    uid: string,
-    receiverUid: string,
-    body: CreateTransaction,
-  ) {
-    try {
-      const transaction = await db.transaction.transfer(userId, uid, receiverUid, body);
-
-      ctx.logger.info({ from: uid, to: receiverUid, ...body }, 'Transfer');
-
-      return response(ctx, httpStatusCodes.OK, transaction);
-    } catch (err) {
-      if (err.code === SQLErrorCode.CheckViolation) {
-        return errorResponse(ctx, httpStatusCodes.NOT_ACCEPTABLE);
-      }
-
-      throw err;
-    }
   }
 }

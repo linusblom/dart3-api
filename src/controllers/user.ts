@@ -33,19 +33,19 @@ export class UserController {
     let metaData: MetaData;
 
     try {
-      jackpot = await db.jackpot.get(userId);
-      ctx.logger.info({ userId, status: 'Jackpot already initiated' }, 'Bootstrap');
-    } catch (err) {
-      jackpot = await db.jackpot.init(userId);
-      ctx.logger.info({ userId, status: 'Jackpot initiated' }, 'Bootstrap');
-    }
-
-    try {
       metaData = await db.userMeta.init(userId);
       ctx.logger.info({ userId, status: 'UserMeta initiated' }, 'Bootstrap');
     } catch (err) {
       metaData = await db.userMeta.findById(userId);
       ctx.logger.info({ userId, status: 'UserMeta already initiated' }, 'Bootstrap');
+    }
+
+    try {
+      jackpot = await db.jackpot.get(userId);
+      ctx.logger.info({ userId, status: 'Jackpot already initiated' }, 'Bootstrap');
+    } catch (err) {
+      jackpot = await db.jackpot.init(userId);
+      ctx.logger.info({ userId, status: 'Jackpot initiated' }, 'Bootstrap');
     }
 
     return response(ctx, httpStatusCodes.OK, { jackpot, metaData });

@@ -16,8 +16,8 @@ export const getUser = async (id: string) => {
   return humps.camelizeKeys(user);
 };
 
-export const updateUser = async (id: string, body: object) => {
-  const user = await auth0.updateUser({ id }, humps.decamelizeKeys(body));
+export const updateUser = async (id: string, payload: object) => {
+  const user = await auth0.updateUser({ id }, humps.decamelizeKeys(payload));
 
   return humps.camelizeKeys(user);
 };

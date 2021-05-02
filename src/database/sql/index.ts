@@ -73,15 +73,18 @@ export const matchTeamLeg = {
 export const player = {
   all: sql('player/all.sql'),
   create: sql('player/create.sql'),
+  createEmailVerification: sql('player/create-email-verification.sql'),
   delete: sql('player/delete.sql'),
-  disablePin: sql('player/disable-pin.sql'),
+  deleteEmailVerification: sql('player/delete-email-verification.sql'),
   findByUid: sql('player/find-by-uid.sql'),
-  findIdByAdmin: sql('player/find-id-by-admin.sql'),
-  findIdByPin: sql('player/find-id-by-pin.sql'),
+  findEmailVerification: sql('player/find-email-verification.sql'),
+  findByAdminPin: sql('player/find-by-admin-pin.sql'),
+  findByPin: sql('player/find-by-pin.sql'),
   findIdByUid: sql('player/find-id-by-uid.sql'),
   findNameByUid: sql('player/find-name-by-uid.sql'),
-  findStatisticsById: sql('player/find-statistics-by-id.sql'),
+  findStatisticsByUid: sql('player/find-statistics-by-uid.sql'),
   updatePin: sql('player/update-pin.sql'),
+  updateRoles: sql('player/update-roles.sql'),
   update: sql('player/update.sql'),
   updateXp: sql('player/update-xp.sql'),
 };
@@ -112,7 +115,7 @@ export const transaction = {
   debit: sql('transaction/debit.sql'),
   deletePlayer: sql('transaction/delete-player.sql'),
   findBankByUserId: sql('transaction/find-bank-by-user-id.sql'),
-  findByPlayerId: sql('transaction/find-by-player-id.sql'),
+  findByPlayerUid: sql('transaction/find-by-player-uid.sql'),
 };
 
 export const userMeta = {

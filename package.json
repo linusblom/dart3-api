@@ -15,7 +15,7 @@
     "auth0": "^2.33.0",
     "aws-sdk": "^2.646.0",
     "bluebird": "^3.7.2",
-    "dart3-sdk": "^0.3.31",
+    "dart3-sdk": "^0.3.39",
     "http-status-codes": "^2.1.0",
     "humps": "^2.0.1",
     "jsonwebtoken": "^8.5.1",

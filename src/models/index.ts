@@ -1,3 +1,3 @@
 export * from './sql';
-export * from './token';
+export * from './middleware';
 export * from './game';

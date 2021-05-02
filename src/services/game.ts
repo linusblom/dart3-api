@@ -257,10 +257,12 @@ export abstract class GameService {
         .map(async (playerId, _, array) => {
           const win = +this.game.prizePool / array.length;
 
-          await this.tx.transaction.credit(playerId, TransactionType.Win, {
-            description: `Winner game #${this.game.id}`,
-            amount: win,
-          });
+          await this.tx.transaction.credit(
+            playerId,
+            TransactionType.Win,
+            win,
+            `Winner game #${this.game.id}`,
+          );
           await this.tx.teamPlayer.updateWin(this.game.id, playerId, win);
 
           return Promise.resolve();

@@ -1,5 +1,10 @@
 WITH
-  h AS (SELECT match_team_id, player_id, round, leg, set, value, multiplier FROM hit WHERE player_id = ${playerId}),
+  h AS (
+    SELECT match_team_id, player_id, round, leg, set, value, multiplier
+    FROM player p
+    LEFT JOIN hit ON player_id = p.id
+    WHERE p.uid = ${uid} and p.user_id = ${userId}
+  ),
   r AS (SELECT SUM(value * multiplier) as score FROM h GROUP BY match_team_id, player_id, round, leg, set)
 SELECT
   (SELECT COUNT(value) AS hits FROM h WHERE value > 0),

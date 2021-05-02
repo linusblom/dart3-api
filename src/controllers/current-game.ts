@@ -46,11 +46,11 @@ export class CurrentGameController {
     ctx: Context,
     service: GameService,
     userId: string,
-    body: CreateTeamPlayer,
+    payload: CreateTeamPlayer,
   ) {
     try {
       const players = await db.task(async (t) => {
-        const player = await t.player.findIdByUid(userId, body.uid);
+        const player = await t.player.findIdByUid(userId, payload.uid);
         const { id, bet } = service.game;
 
         await t.teamPlayer.create(id, player.id, bet);
@@ -86,9 +86,9 @@ export class CurrentGameController {
     return response(ctx, httpStatusCodes.OK, { players });
   }
 
-  async start(ctx: Context, service: GameService, body: StartGame) {
+  async start(ctx: Context, service: GameService, payload: StartGame) {
     try {
-      await service.start(body);
+      await service.start(payload);
 
       return response(ctx, httpStatusCodes.OK);
     } catch (err) {
@@ -107,8 +107,8 @@ export class CurrentGameController {
     });
   }
 
-  async createRound(ctx: Context, service: GameService, userId: string, body: Score[]) {
-    const { gems, ...round } = await service.createRound(body);
+  async createRound(ctx: Context, service: GameService, userId: string, scores: Score[]) {
+    const { gems, ...round } = await service.createRound(scores);
     const jackpotWinner = round.teams.find((t) => t.gems >= 3 && !t.jackpotPaid);
     let playerIds = [];
 

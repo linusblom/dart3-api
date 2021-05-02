@@ -1,5 +1,5 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { CreateGame, Game, MetaData, StartGame } from 'dart3-sdk';
+import { CreateGame, DbId, Game, MetaData, StartGame } from 'dart3-sdk';
 import { nanoid } from 'nanoid';
 
 import { game as sql } from '../database/sql';
@@ -9,6 +9,10 @@ export class GameRepository {
 
   async findByUid(userId: string, uid: string) {
     return this.db.one<Game>(sql.findByUid, { userId, uid });
+  }
+
+  async findIdByUid(userId: string, uid: string) {
+    return this.db.one<DbId>('SELECT id FROM game WHERE user_id = $1 AND uid = $2', [userId, uid]);
   }
 
   async findCurrent(userId: string) {
