@@ -3,7 +3,6 @@ import { DbId, TeamPlayer, TransactionType } from 'dart3-sdk';
 
 import * as sql from '../database/sql';
 import { MatchActive, TeamPlayerPro } from '../models';
-import { throws } from 'assert';
 
 export class TeamPlayerRepository {
   constructor(private db: IDatabase<any>, private pgp: IMain) {}
@@ -46,9 +45,9 @@ export class TeamPlayerRepository {
 
   async updateTeamIds(ids: number[][], teamIds: DbId[]) {
     const data = ids.reduce(
-      (acc, ids, index) => [
+      (acc, array, index) => [
         ...acc,
-        ...ids.map((id) => ({ id, team_id: teamIds[index].id, xp: 100 })),
+        ...array.map((id) => ({ id, team_id: teamIds[index].id, xp: 100 })),
       ],
       [],
     );

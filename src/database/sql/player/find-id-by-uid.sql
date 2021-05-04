@@ -1,1 +1,1 @@
-SELECT id FROM player WHERE uid = ${uid} AND user_id = ${userId}
+SELECT id FROM player WHERE uid = ${uid} AND user_id = ${userId} AND deleted_at IS NULL

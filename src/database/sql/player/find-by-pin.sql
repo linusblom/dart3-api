@@ -1,1 +1,1 @@
-SELECT id, name FROM player WHERE uid = ${uid} AND user_id = ${userId} AND pin = crypt(${pin}, pin)
+SELECT id, name FROM player WHERE uid = ${uid} AND user_id = ${userId} AND pin = crypt(${pin}, pin) AND deleted_at IS NULL
