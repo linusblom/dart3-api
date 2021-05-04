@@ -1,5 +1,3 @@
-import { IBaseProtocol } from 'pg-promise';
-
 export type Param = string | number | boolean;
 
 export interface SQLError {
@@ -11,9 +9,3 @@ export enum SQLErrorCode {
   UniqueViolation = '23505',
   CheckViolation = '23514',
 }
-
-export interface TxFn {
-  (t: any): any;
-}
-
-type Db = IBaseProtocol<any>;

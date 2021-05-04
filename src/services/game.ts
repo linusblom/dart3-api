@@ -89,8 +89,8 @@ export abstract class GameService {
       const status = this.game.random ? MatchStatus.Playing : MatchStatus.Order;
 
       await tx.match.start(matchIds[0].id, matchTeamIds[0].id, status);
-      await tx.jackpot.increaseByGameId(this.game.id, meta);
       await tx.game.start(this.game.id, payload, meta);
+      await tx.jackpot.increaseByGameId(this.game.id, meta);
 
       this.logger.info(
         {
@@ -99,6 +99,8 @@ export abstract class GameService {
           jackpotFee: `${meta.currency} ${+this.game.prizePool * meta.jackpotFee}`,
           nextJackpotFee: `${meta.currency} ${+this.game.prizePool * meta.nextJackpotFee}`,
           rake: `${meta.currency} ${+this.game.prizePool * meta.rake}`,
+          matchId: matchIds[0].id,
+          matchStatus: status,
         },
         'Game started',
       );
@@ -239,6 +241,8 @@ export abstract class GameService {
     const results = await this.tx.matchTeam.findResultsByMatchId(this.active.matchId);
     await this.tx.matchTeam.updatePosition(results);
 
+    this.logger.info({ matchId: this.active.matchId, results }, 'Match ended');
+
     return this.endGame();
   }
 
@@ -253,10 +257,12 @@ export abstract class GameService {
         .map(async (playerId, _, array) => {
           const win = +this.game.prizePool / array.length;
 
-          await this.tx.transaction.credit(playerId, TransactionType.Win, {
-            description: `Winner game #${this.game.id}`,
-            amount: win,
-          });
+          await this.tx.transaction.credit(
+            playerId,
+            TransactionType.Win,
+            win,
+            `Winner game #${this.game.id}`,
+          );
           await this.tx.teamPlayer.updateWin(this.game.id, playerId, win);
 
           return Promise.resolve();
@@ -270,6 +276,8 @@ export abstract class GameService {
     );
 
     await this.tx.team.updatePosition(results);
+
+    this.logger.info({ gameId: this.game.id, results }, 'Game ended');
 
     return this.roundResponse({ id: this.game.id, endedAt: new Date().toISOString() });
   }

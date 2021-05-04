@@ -36,9 +36,9 @@ jobs:
         AWS_REGION: eu-north-1
         AUTH0_CLIENT_ID: ${{ secrets.API_AUTH0_CLIENT_ID }}
         AUTH0_CLIENT_SECRET: ${{ secrets.API_AUTH0_CLIENT_SECRET }}
-        AUTH0_URL: https://dart3.eu.auth0.com
+        AUTH0_DOMAIN: dart3.eu.auth0.com
         AUTH0_AUDIENCE: https://dart3.app
-        ALLOWED_ORIGIN: https://dart3.app
+        CLIENT_URL: https://dart3.app
         LOG_LEVEL: info
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: dart3-api

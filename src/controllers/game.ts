@@ -6,7 +6,7 @@ import { response, errorResponse } from '../utils';
 import { db } from '../database';
 
 export class GameController {
-  async create(ctx: Context, userId: string, body: CreateGame) {
+  async create(ctx: Context, userId: string, payload: CreateGame) {
     return db.task(async (t) => {
       const currentGame = await t.game.findCurrent(userId);
 
@@ -14,7 +14,7 @@ export class GameController {
         return errorResponse(ctx, httpStatusCodes.CONFLICT);
       }
 
-      const game = await t.game.create(userId, body);
+      const game = await t.game.create(userId, payload);
 
       ctx.logger.info({ ...game }, 'Game created');
 

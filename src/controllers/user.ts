@@ -2,16 +2,14 @@ import { Context } from 'koa';
 import httpStatusCodes from 'http-status-codes';
 import { Jackpot, MetaData, User } from 'dart3-sdk';
 
-import { Auth0Service } from '../services';
 import { response, errorResponse } from '../utils';
 import { db } from '../database';
 import { uploadFile } from '../aws';
+import { getUser, updateUser } from '../auth0';
 
 export class UserController {
-  constructor(private service = Auth0Service.getInstance()) {}
-
   async get(ctx: Context, userId: string) {
-    const user = await this.service.getUser(ctx, userId);
+    const user = await getUser(userId);
     const bank = await db.transaction.findBankByUserId(userId);
     const metaData = await db.userMeta.findById(userId);
 
@@ -20,7 +18,7 @@ export class UserController {
 
   async update(ctx: Context, userId: string, { metaData, ...auth0 }: Partial<User>) {
     if (auth0 && Object.keys(auth0).length) {
-      await this.service.updateUser(ctx, userId, auth0);
+      await updateUser(userId, auth0);
     }
 
     if (metaData) {
@@ -35,19 +33,19 @@ export class UserController {
     let metaData: MetaData;
 
     try {
-      jackpot = await db.jackpot.get(userId);
-      ctx.logger.info({ userId, status: 'Jackpot already initiated' }, 'Bootstrap');
-    } catch (err) {
-      jackpot = await db.jackpot.init(userId);
-      ctx.logger.info({ userId, status: 'Jackpot initiated' }, 'Bootstrap');
-    }
-
-    try {
       metaData = await db.userMeta.init(userId);
       ctx.logger.info({ userId, status: 'UserMeta initiated' }, 'Bootstrap');
     } catch (err) {
       metaData = await db.userMeta.findById(userId);
       ctx.logger.info({ userId, status: 'UserMeta already initiated' }, 'Bootstrap');
+    }
+
+    try {
+      jackpot = await db.jackpot.get(userId);
+      ctx.logger.info({ userId, status: 'Jackpot already initiated' }, 'Bootstrap');
+    } catch (err) {
+      jackpot = await db.jackpot.init(userId);
+      ctx.logger.info({ userId, status: 'Jackpot initiated' }, 'Bootstrap');
     }
 
     return response(ctx, httpStatusCodes.OK, { jackpot, metaData });

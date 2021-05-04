@@ -15,3 +15,8 @@ export interface Token {
   };
   signature: string;
 }
+
+export interface PinOptions {
+  allowDisabled?: boolean;
+  onlyAdmin?: boolean;
+}

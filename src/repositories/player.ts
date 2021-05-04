@@ -1,5 +1,5 @@
 import { IDatabase, IMain } from 'pg-promise';
-import { Player, CreatePlayer, UpdatePlayer, DbId } from 'dart3-sdk';
+import { Player, CreatePlayer, UpdatePlayer, DbId, PlayerStats, Role } from 'dart3-sdk';
 import { nanoid } from 'nanoid';
 
 import { player as sql } from '../database/sql';
@@ -22,12 +22,12 @@ export class PlayerRepository {
     return this.db.one<Player>(sql.findByUid, { userId, uid });
   }
 
-  async findIdByPin(userId: string, uid: string, pin: string) {
-    return this.db.oneOrNone<DbId>(sql.findIdByPin, { userId, uid, pin });
+  async findByPin(userId: string, uid: string, pin: string) {
+    return this.db.oneOrNone<Partial<Player>>(sql.findByPin, { userId, uid, pin });
   }
 
-  async findIdByAdmin(userId: string, pin: string) {
-    return this.db.one<DbId>(sql.findIdByAdmin, { userId, pin });
+  async findByAdminPin(userId: string, pin: string) {
+    return this.db.one<Partial<Player>>(sql.findByAdminPin, { userId, pin });
   }
 
   async create(userId: string, player: CreatePlayer, color: string, avatar: string, pin: string) {
@@ -41,7 +41,7 @@ export class PlayerRepository {
     });
   }
 
-  async update(userId: string, uid: string, player: UpdatePlayer) {
+  async update(userId: string, uid: string, { roles, ...player }: UpdatePlayer) {
     await this.db.none(sql.update, { userId, uid, ...player });
   }
 
@@ -49,19 +49,36 @@ export class PlayerRepository {
     await this.db.none(sql.updatePin, { userId, uid, pin });
   }
 
-  async disablePin(userId: string, uid: string) {
-    await this.db.none(sql.disablePin, { userId, uid });
+  async toggleRoles(userId: string, uid: string, add: Role[], remove: Role[]) {
+    const player = await this.findByUid(userId, uid);
+    const roles = [...player.roles.filter((role) => ![...add, ...remove].includes(role)), ...add];
+
+    await this.db.none(sql.updateRoles, { userId, uid, roles });
+
+    return roles;
   }
 
   async delete(userId: string, uid: string) {
     return this.db.one<DbId>(sql.delete, { userId, uid });
   }
 
-  async findStatisticsById(playerId: number) {
-    return this.db.one(sql.findStatisticsById, { playerId });
+  async findStatisticsByUid(userId: string, uid: string) {
+    return this.db.one<PlayerStats>(sql.findStatisticsByUid, { userId, uid });
   }
 
   async updateXp(id: number, gameId: number) {
     await this.db.none(sql.updateXp, { id, gameId });
+  }
+
+  async createEmailVerification(uid: string, token: string) {
+    return this.db.none(sql.createEmailVerification, { uid, token });
+  }
+
+  async findEmailVerification(uid: string, token: string) {
+    return this.db.one(sql.findEmailVerification, { uid, token });
+  }
+
+  async deleteEmailVerification(uid: string) {
+    await this.db.none(sql.deleteEmailVerification, { uid });
   }
 }

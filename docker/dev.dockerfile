@@ -1,8 +1,8 @@
-FROM node:12.4-alpine
+FROM node:14.16.1-alpine
+RUN apk upgrade musl
+
 RUN mkdir /app
 WORKDIR /app
-COPY package.json package.json
-COPY yarn.lock yarn.lock
-RUN npm install -g yarn
-RUN yarn && mv node_modules /node_modules
-COPY . .
+COPY . /app
+
+ENTRYPOINT ["./scripts/start.sh"]

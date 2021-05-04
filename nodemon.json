@@ -2,6 +2,7 @@
   "verbose": true,
   "ignore": ["src/**/*.spec.ts"],
   "watch": ["src/**/*.ts", "src/database/sql/**/*.sql"],
+  "ext": "ts,json,sql",
   "execMap": {
     "ts": "node --inspect=0.0.0.0:9229 --nolazy -r ts-node/register"
   }

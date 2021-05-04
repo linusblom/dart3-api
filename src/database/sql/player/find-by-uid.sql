@@ -1,4 +1,4 @@
-SELECT p.id, p.uid, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, p.pro, p.double, p.pin_disabled, COALESCE(SUM(t.bet) - SUM(t.refund), 0.00) AS turn_over, COALESCE(SUM(t.win) - SUM(t.bet) + SUM(t.refund), 0.00) AS net
+SELECT p.id, p.uid, p.name, p.email, p.balance, p.created_at, p.deleted_at, p.color, p.avatar, p.xp, p.single, p.double, p.triple, p.roles, COALESCE(SUM(t.bet) - SUM(t.refund), 0.00) AS turn_over, COALESCE(SUM(t.win) - SUM(t.bet) + SUM(t.refund), 0.00) AS net
 FROM player AS p
 LEFT JOIN (
   SELECT player_id,
