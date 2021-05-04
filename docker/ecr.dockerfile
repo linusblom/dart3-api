@@ -1,4 +1,5 @@
-FROM node:12.4-alpine
+FROM node:14.16.1-alpine
+RUN apk upgrade musl
 
 ARG PORT
 ARG ENV
@@ -35,5 +36,7 @@ COPY . /app
 RUN yarn build
 RUN yarn install --prod
 COPY ./src/database/sql /app/dist/database/sql
+COPY ./sql /app/sql
+COPY ./scripts/start.sh /app/scripts
 
-CMD ["node", "dist/app.js"]
+CMD ["./scripts/start.sh"]

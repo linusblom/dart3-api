@@ -28,21 +28,9 @@ services:
       - .:/app
       - ./nodemon.json:/app/nodemon.json
     links:
-      - migration
-    depends_on:
-      - migration
-    command: yarn start
-
-  migration:
-    build:
-      context: .
-      dockerfile: docker/migration.dockerfile
-    image: dart3-migration
-    links:
       - database
     depends_on:
       - database
-    command: pg-migrator postgres://postgres:dart3@database:5432/dart3
 
   database:
     image: postgres:11.8

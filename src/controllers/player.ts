@@ -34,12 +34,15 @@ export class PlayerController {
     const color = randomColor();
     const avatar = `https://s.gravatar.com/avatar/${md5(payload.email)}?d=identicon`;
     const pin = generatePin();
+    const token = nanoid(64);
 
-    const player = await db.player.create(userId, payload, color, avatar, pin);
+    return db.task(async (t) => {
+      const player = await t.player.create(userId, payload, color, avatar, pin);
+      await t.player.createEmailVerification(player.uid, token);
+      await sendEmail(payload.email, generateWelcomeEmail(payload.name, player.uid, token, pin));
 
-    await sendEmail(payload.email, generateWelcomeEmail(payload.name, pin));
-
-    return response(ctx, httpStatusCodes.CREATED, player);
+      return response(ctx, httpStatusCodes.CREATED, player);
+    });
   }
 
   async update(ctx: Context, userId: string, uid: string, payload: UpdatePlayer) {

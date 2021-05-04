@@ -39,26 +39,26 @@ export const sendEmail = async (
   return ses.sendEmail(params).promise();
 };
 
-export const generateWelcomeEmail = (name: string, pin: string) => ({
+export const generateWelcomeEmail = (name: string, uid: string, token: string, pin: string) => ({
   subject: 'Welcome to Dart3',
-  body: `<h2>Welcome ${name}!</h2>Your PIN code is ${pin}.`,
-  text: `Welcome ${name}!\nYour PIN code is ${pin}.`,
+  body: `<h2>Welcome to Dart3 ${name}!</h2><p>Verify your email by clicking this link: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours, you may request a new link after this time.</p><p>Your PIN code is <strong>${pin}</strong>. Be sure to remember, or disable it.</p>`,
+  text: `Welcome to Dart3 ${name}!\n\nVerify your email by clicking this link: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours, you may request a new link after this time.\n\nYour PIN code is ${pin}. Be sure to remember, or disable it.`,
 });
 
 export const generateResetPinEmail = (name: string, pin: string) => ({
-  subject: 'New PIN code',
-  body: `<h2>Hi ${name}!</h2>Your new PIN code is ${pin}.`,
-  text: `Hi ${name}!\nYour new PIN code is ${pin}.`,
+  subject: 'PIN code reset',
+  body: `<h2>Hi ${name}!</h2><p>Your new PIN code is <strong>${pin}</strong>. Be sure to remember, or disable it.</p>`,
+  text: `Hi ${name}!\n\nYour new PIN code is ${pin}. Be sure to remember, or disable it.`,
 });
 
 export const generateDisablePinEmail = (name: string) => ({
   subject: 'PIN code disabled',
-  body: `<h2>Hi ${name}!</h2>Your PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.`,
-  text: `Hi ${name}!\nYour PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.`,
+  body: `<h2>Hi ${name}!</h2><p>Your PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.</p>`,
+  text: `Hi ${name}!\n\nYour PIN code has been disabled on your Dart3 player account. If this was requested by you, ignore this email, otherwise please login and reset your PIN code.`,
 });
 
 export const generateVerificationEmail = (name: string, uid: string, token: string) => ({
   subject: 'Verify your email',
-  body: `<h2>Hi ${name}!</h2>Please click this link to verify your email: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours.`,
-  text: `Hi ${name}!\nPlease click this link to verify your email: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours.`,
+  body: `<h2>Hi ${name}!</h2><p>Verify your email by clicking this link: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours, you may request a new link after this time.</p>`,
+  text: `Hi ${name}!\n\nVerify your email by clicking this link: ${CLIENT_URL}/verify?u=${uid}&t=${token}. Link is valid for 24 hours, you may request a new link after this time.`,
 });
