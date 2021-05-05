@@ -445,16 +445,16 @@ atomic-sleep@^1.0.0:
   resolved "https://registry.yarnpkg.com/atomic-sleep/-/atomic-sleep-1.0.0.tgz#eb85b77a601fc932cfe432c5acd364a9e2c9075b"
   integrity sha512-kNOjDqAh7px0XWNI+4QbzoiR/nTkHAWNud2uvnJquD1/x5a7EQZMJT0AczqK0Qn67oY/TTQ1LbUKajZpp3I9tQ==
 
-auth0@^2.33.0:
-  version "2.33.0"
-  resolved "https://registry.yarnpkg.com/auth0/-/auth0-2.33.0.tgz#1284ad691fa841b19b96e8a0a8df44f536d25372"
-  integrity sha512-q9xCKE+WC9FKnPdsOis6K9zHGGZBviNN39ltIJvawkUT8N2/q95T1WeS1oVVmVrBxtSOag4G5VC1mfeD7fLBaQ==
+auth0@^2.34.2:
+  version "2.34.2"
+  resolved "https://registry.yarnpkg.com/auth0/-/auth0-2.34.2.tgz#5357ce2ffb57e6d69b7172b1e3fde17006b67b42"
+  integrity sha512-aViznMt3FHKVjUHy1iwPOo9GYi8gMUS0wrVnQrncbHDBOiGBvyb9xLVy8RF3STIJIf3dgQZTrdh08QCgrSBI4A==
   dependencies:
     axios "^0.21.1"
     es6-promisify "^6.1.1"
     form-data "^3.0.0"
     jsonwebtoken "^8.5.1"
-    jwks-rsa "^1.10.0"
+    jwks-rsa "^1.12.1"
     lru-memoizer "^2.1.0"
     rest-facade "^1.13.0"
     retry "^0.12.0"
@@ -833,10 +833,10 @@ crypto-random-string@^2.0.0:
   resolved "https://registry.yarnpkg.com/crypto-random-string/-/crypto-random-string-2.0.0.tgz#ef2a7a966ec11083388369baa02ebead229b30d5"
   integrity sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==
 
-dart3-sdk@^0.3.39:
-  version "0.3.39"
-  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.3.39.tgz#48f9f261b8e1af5b915ad9af9e1c9d886e87f9b2"
-  integrity sha512-RKYiek6IxlyKqgAtiyECvdSjozVX/8UPs9VGIjrQWemYU4sKd8z7dys2aF13zt5TNVpY+fPXDggVN0JjUCoXKg==
+dart3-sdk@^0.3.40:
+  version "0.3.40"
+  resolved "https://registry.yarnpkg.com/dart3-sdk/-/dart3-sdk-0.3.40.tgz#8ebd899a6618192173c3c8055a30b7b8f49d1cd7"
+  integrity sha512-xs0zwVn1MknAo8zB0Kyx7uo3AKKSyUBx5fIJbLBpyfj76GsYWFZdv9W9wbroJNCxwOIFSJ6t886x5tSkno/q3g==
 
 data-uri-to-buffer@3:
   version "3.0.1"
@@ -1524,22 +1524,6 @@ jwa@^1.4.1:
     buffer-equal-constant-time "1.0.1"
     ecdsa-sig-formatter "1.0.11"
     safe-buffer "^5.0.1"
-
-jwks-rsa@^1.10.0:
-  version "1.12.2"
-  resolved "https://registry.yarnpkg.com/jwks-rsa/-/jwks-rsa-1.12.2.tgz#2299408256e7c9c66ed030a58a2ab080701f9aae"
-  integrity sha512-6gPo/mQUxXJt75oPtjhM3Jm3FSXnmwg73QDA8dpgP7YmIKlIY+2StngFxt4w4Y1podtSbtV3jttNOdctuxAX1Q==
-  dependencies:
-    "@types/express-jwt" "0.0.42"
-    axios "^0.21.1"
-    debug "^4.1.0"
-    http-proxy-agent "^4.0.1"
-    https-proxy-agent "^5.0.0"
-    jsonwebtoken "^8.5.1"
-    limiter "^1.1.5"
-    lru-memoizer "^2.1.2"
-    ms "^2.1.2"
-    proxy-from-env "^1.1.0"
 
 jwks-rsa@^1.12.1:
   version "1.12.1"

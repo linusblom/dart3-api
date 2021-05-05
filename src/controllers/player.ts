@@ -38,6 +38,11 @@ export class PlayerController {
 
     return db.task(async (t) => {
       const player = await t.player.create(userId, payload, color, avatar, pin);
+
+      if (payload.consent) {
+        await t.player.toggleRoles(userId, player.uid, [Role.EmailConsent], []);
+      }
+
       await t.player.createEmailVerification(player.uid, token);
       await sendEmail(payload.email, generateWelcomeEmail(payload.name, player.uid, token, pin));
 
@@ -54,7 +59,7 @@ export class PlayerController {
         avatar = `https://s.gravatar.com/avatar/${md5(email)}?d=identicon`;
       }
 
-      await t.player.toggleRoles(userId, uid, payload.roles, [Role.Pro]);
+      await t.player.toggleRoles(userId, uid, payload.roles, [Role.Pro, Role.EmailConsent]);
       await t.player.update(userId, uid, { ...payload, avatar });
 
       const player = await t.player.findByUid(userId, uid);

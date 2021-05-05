@@ -4,12 +4,12 @@ import { Role } from 'dart3-sdk';
 export const createPlayerSchema = Joi.object({
   name: Joi.string().min(3).required(),
   email: Joi.string().email().required(),
-  terms: Joi.boolean().required().valid(true),
+  consent: Joi.boolean().required(),
 });
 
 export const updatePlayerSchema = Joi.object({
   name: Joi.string().min(3).required(),
-  roles: Joi.array().items(Role.Pro).required(),
+  roles: Joi.array().items(Role.Pro, Role.EmailConsent).required(),
   single: Joi.number().min(1).max(25).not(21, 22, 23, 24).required(),
   double: Joi.number().min(1).max(25).not(21, 22, 23, 24).required(),
   triple: Joi.number().min(1).max(25).not(21, 22, 23, 24).required(),
