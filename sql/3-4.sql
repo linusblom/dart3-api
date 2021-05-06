@@ -1,0 +1,1 @@
+ALTER TABLE player ALTER COLUMN roles SET DEFAULT '{"pin"}'::TEXT[];
