@@ -88,9 +88,9 @@ export abstract class GameService {
 
       const status = this.game.random ? MatchStatus.Playing : MatchStatus.Order;
 
+      await tx.jackpot.increaseByGameId(this.game.id, meta);
       await tx.match.start(matchIds[0].id, matchTeamIds[0].id, status);
       await tx.game.start(this.game.id, payload, meta);
-      await tx.jackpot.increaseByGameId(this.game.id, meta);
 
       this.logger.info(
         {
